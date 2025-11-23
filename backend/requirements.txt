@@ -1,0 +1,34 @@
+# FastAPI
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+
+# LangChain & LangGraph
+langchain
+langchain-core
+langchain-openai
+langchain-community
+langgraph
+langsmith
+
+# Database
+psycopg2-binary
+sqlalchemy
+
+# PDF Processing
+PyPDF2
+pypdf
+reportlab
+weasyprint
+
+# Web Search
+tavily-python
+
+# Authentication
+PyJWT
+passlib[bcrypt]
+
+# Utilities
+pydantic
+httpx
