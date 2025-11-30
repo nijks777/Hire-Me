@@ -24,8 +24,18 @@ Extract and structure the following information from the job description:
 4. Company values/culture indicators
 5. Job title and level
 
+If HR/Recruiter name is provided, note it for personalization.
+If custom instructions are provided, incorporate them into the analysis.
+
 Return as structured JSON."""),
-        ("human", "Job Description:\n{job_description}\n\nCompany: {company_name}")
+        ("human", """Job Description:
+{job_description}
+
+Company: {company_name}
+HR/Recruiter: {hr_name}
+Custom Instructions: {custom_prompt}
+
+Analyze the job description and extract key requirements.""")
     ])
 
     chain = prompt | llm
@@ -33,10 +43,12 @@ Return as structured JSON."""),
     try:
         response = chain.invoke({
             "job_description": state["job_description"],
-            "company_name": state["company_name"]
+            "company_name": state["company_name"],
+            "hr_name": state.get("hr_name") or "Not specified",
+            "custom_prompt": state.get("custom_prompt") or "No specific instructions"
         })
 
-        # Parse LLM response (simplified - you'd want proper JSON parsing)
+        # Parse LLM response
         job_requirements = {
             "raw_analysis": response.content,
             "company_name": state["company_name"]

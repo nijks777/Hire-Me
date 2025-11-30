@@ -1,1 +1,1 @@
-# Utils package
+# Utility functions

@@ -263,6 +263,12 @@ export default function Header() {
               Generate
             </Link>
             <Link
+              href="/history"
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
+            >
+              History
+            </Link>
+            <Link
               href="/profile"
               className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
             >
@@ -271,7 +277,7 @@ export default function Header() {
 
             {/* Credits Badge */}
             {user && (
-              <div className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full shadow-lg">
+              <div className="flex items-center space-x-2 px-4 py-2 bg-linear-to-r from-purple-500 to-blue-500 rounded-full shadow-lg">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="currentColor"

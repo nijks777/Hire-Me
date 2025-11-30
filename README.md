@@ -1,101 +1,112 @@
-# Hire-Me Frontend
+# Hire-Me
 
-Next.js 16 frontend application with authentication for the Hire-Me multi-agent platform.
+AI-powered job application generator that creates personalized cover letters and cold emails using multi-agent system.
 
 ## Features
 
-- ✅ Modern UI with Tailwind CSS
-- ✅ TypeScript for type safety
-- ✅ Login & Signup pages
-- ✅ Protected Dashboard route
-- ✅ JWT-based authentication
-- ✅ API client for backend communication
-- ✅ Auth context for state management
+- **Multi-Agent AI Pipeline**: 5 specialized agents analyze job descriptions, research companies, and generate tailored content
+- **Real-time Generation**: Live progress updates as each agent completes its analysis
+- **Document Management**: View, edit, and download all generated documents with history tracking
+- **User Authentication**: Secure signup/login with password reset via email OTP
+- **Credit System**: Track usage with built-in credits system
+- **Profile Management**: Store professional information for better content generation
 
-## Getting Started
+## Tech Stack
 
-### Prerequisites
+**Frontend:**
+- Next.js 16 (React, TypeScript)
+- Tailwind CSS
+- Prisma ORM
 
-- Node.js 18+ installed
-- Backend API running on port 8000
+**Backend:**
+- Python (FastAPI)
+- LangGraph for multi-agent orchestration
+- OpenAI GPT-4
+- PostgreSQL (Neon)
 
-### Installation
+**Email:**
+- Resend API for transactional emails
 
+## Setup
+
+### Backend
+
+1. Navigate to backend directory:
 ```bash
-# Install dependencies (already done)
-npm install
+cd backend
+```
 
-# Start development server
+2. Create virtual environment and install dependencies:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+3. Create `.env` file:
+```
+DATABASE_URL=your_postgresql_url
+OPENAI_API_KEY=your_openai_key
+```
+
+4. Run migrations:
+```bash
+python run_migration.py
+```
+
+5. Start backend server:
+```bash
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend
+
+1. Navigate to frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Create `.env.local` file:
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+DATABASE_URL=your_postgresql_url
+NEXTAUTH_SECRET=your_secret_key
+NEXTAUTH_URL=http://localhost:3000
+RESEND_API_KEY=your_resend_api_key
+```
+
+4. Run Prisma migrations:
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+5. Start development server:
+```bash
 npm run dev
 ```
 
-The app will be available at http://localhost:3000 (or another port if 3000 is in use)
+## Usage
 
-### Build for Production
+1. **Sign Up**: Create an account at `/signup`
+2. **Complete Profile**: Add your professional information at `/profile`
+3. **Generate Documents**: Go to `/generate`, enter job details, and let AI create personalized content
+4. **View History**: Access all past generations at `/history`
+5. **Edit & Download**: Edit generated content and download as PDF
 
-```bash
-npm run build
-npm start
-```
+## Multi-Agent Pipeline
 
-## Project Structure
+1. **Input Analyzer**: Extracts job requirements and key information
+2. **Research Agent**: Gathers company information and culture insights
+3. **Resume Analyzer**: Analyzes user qualifications and matches them to job
+4. **Style Analyzer**: Studies user's writing style from previous documents
+5. **Content Generator**: Creates personalized cover letter and cold email
 
-```
-frontend/
-├── app/
-│   ├── login/          # Login page
-│   ├── signup/         # Signup page
-│   ├── dashboard/      # Protected dashboard
-│   ├── layout.tsx      # Root layout
-│   ├── page.tsx        # Home page
-│   └── globals.css     # Global styles with Tailwind
-├── lib/
-│   ├── api.ts          # API client
-│   ├── auth-context.tsx # Auth state management
-│   └── types.ts        # TypeScript types
-├── components/         # Reusable components
-└── .env.local          # Environment variables
-```
+## License
 
-## Environment Variables
-
-Create a `.env.local` file:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-## Available Routes
-
-- `/` - Home page
-- `/login` - Login page
-- `/signup` - Signup page
-- `/dashboard` - Protected dashboard (requires authentication)
-
-## Authentication Flow
-
-1. User submits credentials on `/login` or `/signup`
-2. Frontend sends request to backend API
-3. Backend validates and returns JWT tokens
-4. Tokens stored in localStorage
-5. Protected routes check for valid token
-6. Token included in Authorization header for API requests
-
-## API Integration
-
-The frontend expects the following backend endpoints:
-
-- `POST /auth/login` - User login
-- `POST /auth/signup` - User registration
-- `POST /auth/refresh` - Refresh access token
-- `GET /auth/me` - Get current user
-- `POST /auth/logout` - Logout user
-
-## Next Steps
-
-- [x] Frontend UI complete
-- [ ] Set up Python backend with FastAPI
-- [ ] Create database models
-- [ ] Implement authentication endpoints
-- [ ] Connect frontend to backend
-- [ ] Add LangGraph multi-agent functionality
+MIT

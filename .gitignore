@@ -3,9 +3,12 @@
 .env.local
 .env.*.local
 .env.production
+backend/.env
+frontend/.env.local
 
 # Documentation
 *.md
+!README.md
 
 # Dependencies
 node_modules/

@@ -5,9 +5,9 @@ from app.config import settings
 
 def style_analyzer_agent(state: AgentState) -> AgentState:
     """
-    Agent 4: Analyze writing style from demo cover letter and cold email
+    Agent 4: Analyze user's writing style from demo files (cover letter & cold email)
     """
-    print("✍️ Agent 4: Analyzing writing style...")
+    print("✍️  Agent 4: Analyzing writing style...")
 
     llm = ChatOpenAI(
         model="gpt-4o-mini",
@@ -16,58 +16,61 @@ def style_analyzer_agent(state: AgentState) -> AgentState:
     )
 
     try:
-        has_cover_letter = bool(state.get("demo_cover_letter"))
-        has_cold_email = bool(state.get("demo_cold_email"))
+        # Check if demo files are provided
+        demo_cover_letter = state.get("demo_cover_letter")
+        demo_cold_email = state.get("demo_cold_email")
 
-        if not has_cover_letter and not has_cold_email:
+        if not demo_cover_letter and not demo_cold_email:
             state["writing_style"] = {
-                "tone": "professional",
-                "style": "standard",
-                "note": "No demo documents provided - using default professional style"
+                "note": "No demo files provided - will use default professional style"
             }
-            state["progress_messages"].append("⚠️ No demo docs (using default style)")
+            state["progress_messages"].append("⚠️ No demo files found (using default style)")
             return state
 
+        # Prepare demo content
+        demo_content = ""
+        if demo_cover_letter:
+            demo_content += f"\n--- COVER LETTER SAMPLE ---\n{demo_cover_letter}\n"
+        if demo_cold_email:
+            demo_content += f"\n--- COLD EMAIL SAMPLE ---\n{demo_cold_email}\n"
+
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a writing style analyst.
-Analyze the provided documents and identify:
-1. Tone (formal, casual, enthusiastic, etc.)
-2. Writing style (concise, detailed, storytelling, etc.)
-3. Sentence structure preferences
-4. Key phrases or patterns
-5. Personality traits expressed
+            ("system", """You are an expert writing style analyzer.
+Analyze the provided writing samples and extract:
+1. Tone (formal, semi-formal, casual, enthusiastic, etc.)
+2. Voice (active/passive, first-person perspective)
+3. Sentence structure (short/concise, long/detailed, varied)
+4. Vocabulary level (simple, intermediate, advanced/technical)
+5. Key phrases and expressions commonly used
+6. Opening and closing styles
+7. Paragraph structure and organization
+8. Use of storytelling or data-driven approach
+9. Unique stylistic elements or patterns
 
-Provide a style guide to replicate this writing."""),
-            ("human", """Demo Cover Letter:
-{cover_letter}
+Provide detailed analysis that can be used to replicate this writing style."""),
+            ("human", """Analyze the following writing samples:
+{demo_content}
 
-Demo Cold Email:
-{cold_email}
-
-Analyze the writing style.""")
+Extract and describe the writing style in detail so it can be replicated in new documents.""")
         ])
 
         chain = prompt | llm
         response = chain.invoke({
-            "cover_letter": state.get("demo_cover_letter", "Not provided"),
-            "cold_email": state.get("demo_cold_email", "Not provided")
+            "demo_content": demo_content
         })
 
         state["writing_style"] = {
             "analysis": response.content,
-            "has_cover_letter": has_cover_letter,
-            "has_cold_email": has_cold_email
+            "has_demo_files": True,
+            "demo_cover_letter_provided": bool(demo_cover_letter),
+            "demo_cold_email_provided": bool(demo_cold_email)
         }
-        state["progress_messages"].append("✅ Writing style analyzed")
+        state["progress_messages"].append("✅ Writing style analyzed successfully")
         state["current_agent"] = "style_analyzer"
 
     except Exception as e:
         print(f"Style analyzer error: {e}")
         state["errors"].append(f"Style Analyzer Error: {str(e)}")
-        state["writing_style"] = {
-            "tone": "professional",
-            "note": "Error in analysis - using default"
-        }
-        state["progress_messages"].append("⚠️ Style analysis error (using defaults)")
+        state["progress_messages"].append("❌ Style analysis failed")
 
     return state

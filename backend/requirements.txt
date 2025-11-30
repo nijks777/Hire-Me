@@ -1,34 +1,24 @@
-# FastAPI
 fastapi
 uvicorn[standard]
 python-multipart
 python-dotenv
+pydantic
+pydantic-settings
 
 # LangChain & LangGraph
 langchain
-langchain-core
 langchain-openai
-langchain-community
 langgraph
-langsmith
+langchain-core
 
 # Database
 psycopg2-binary
 sqlalchemy
 
-# PDF Processing
-PyPDF2
-pypdf
-reportlab
-weasyprint
-
-# Web Search
-tavily-python
-
-# Authentication
-PyJWT
+# Auth
+pyjwt
 passlib[bcrypt]
+python-jose[cryptography]
 
-# Utilities
-pydantic
+# Utils
 httpx

@@ -17,18 +17,18 @@ def extract_text_from_pdf(pdf_data: bytes) -> str:
         print(f"Error extracting PDF text: {e}")
         return ""
 
-def extract_text_from_file(file_data: bytes, mime_type: str) -> Optional[str]:
+def extract_text_from_file(file_data, mime_type: str) -> Optional[str]:
     """Extract text from file based on MIME type"""
     if not file_data:
         return None
+
+    # Convert memoryview to bytes if needed (PostgreSQL returns memoryview for Bytes columns)
+    if isinstance(file_data, memoryview):
+        file_data = bytes(file_data)
 
     if mime_type == "application/pdf":
         return extract_text_from_pdf(file_data)
     elif mime_type == "text/plain":
         return file_data.decode('utf-8')
-    elif "word" in mime_type or "document" in mime_type:
-        # For Word documents, we'd need python-docx
-        # For now, return None or implement if needed
-        return None
     else:
         return None

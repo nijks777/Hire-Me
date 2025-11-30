@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from project root (parent directory)
+env_path = Path(__file__).parent.parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 class Settings:
     # Database
@@ -10,22 +13,15 @@ class Settings:
     # OpenAI
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-    # LangSmith
-    LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "true")
-    LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
-    LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
-    LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "hire-me-agent-pipeline")
-
-    # Tavily
-    TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
     # JWT
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-    JWT_REFRESH_SECRET_KEY = os.getenv("JWT_REFRESH_SECRET_KEY")
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
     # Server
     PORT = int(os.getenv("PORT", 8000))
     HOST = os.getenv("HOST", "0.0.0.0")
+
+    # Frontend
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 settings = Settings()

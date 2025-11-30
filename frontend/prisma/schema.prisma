@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,90 +8,88 @@ datasource db {
 }
 
 model User {
-  id               String       @id @default(uuid())
-  email            String       @unique
-  name             String
-  password         String
-  emailVerified    Boolean      @default(false)
-
-  // Credits System
-  credits          Int          @default(5)
-
-  // Resume
-  resumeFileName   String?
-  resumeData       Bytes?
-  resumeMimeType   String?
-  resumeUploadedAt DateTime?
-
-  // Demo Cover Letter
-  coverLetterFileName   String?
+  id                    String        @id @default(uuid())
+  email                 String        @unique
+  name                  String
+  password              String
+  emailVerified         Boolean       @default(false)
+  resumeFileName        String?
+  resumeData            Bytes?
+  resumeMimeType        String?
+  resumeUploadedAt      DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  coldEmailData         Bytes?
+  coldEmailFileName     String?
+  coldEmailMimeType     String?
+  coldEmailUploadedAt   DateTime?
   coverLetterData       Bytes?
+  coverLetterFileName   String?
   coverLetterMimeType   String?
   coverLetterUploadedAt DateTime?
-
-  // Demo Cold Email
-  coldEmailFileName   String?
-  coldEmailData       Bytes?
-  coldEmailMimeType   String?
-  coldEmailUploadedAt DateTime?
-
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  profile          UserProfile?
+  credits               Int           @default(5)
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?     @db.Timestamp(6)
+  generations           generations[]
+  profile               UserProfile?
 
   @@map("users")
 }
 
 model UserProfile {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Personal Info
-  phoneNumber        String?
-  country            String?
-  location           String?
-  linkedinUrl        String?
-  portfolioUrl       String?
-  githubUrl          String?
-
-  // Professional Info
-  currentJobTitle    String?
-  yearsOfExperience  Float?
-  professionalSummary String? @db.Text
-
-  // Education
-  highestDegree      String?
-  fieldOfStudy       String?
-  university         String?
-  graduationYear     Int?
-
-  // Work Experience (JSON array of objects)
-  workExperience     String? @db.Text
-
-  // Skills & Expertise
-  technicalSkills    String? @db.Text
-  softSkills         String? @db.Text
-  certifications     String? @db.Text
-
-  // Achievements & Projects
-  keyAchievements    String? @db.Text
-  notableProjects    String? @db.Text
-
-  // Career Preferences
-  targetRoles        String? @db.Text
-  industriesOfInterest String? @db.Text
-  workPreference     String? // remote, on-site, hybrid
-  currency           String?
-  salaryExpectation  String?
-
-  // Additional Info
-  languagesSpoken    String?
-  availability       String?
-  noticePeriod       String?
-
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  phoneNumber          String?
+  country              String?
+  location             String?
+  linkedinUrl          String?
+  portfolioUrl         String?
+  githubUrl            String?
+  currentJobTitle      String?
+  yearsOfExperience    Float?
+  professionalSummary  String?
+  highestDegree        String?
+  fieldOfStudy         String?
+  university           String?
+  graduationYear       Int?
+  workExperience       String?
+  technicalSkills      String?
+  softSkills           String?
+  certifications       String?
+  keyAchievements      String?
+  notableProjects      String?
+  targetRoles          String?
+  industriesOfInterest String?
+  workPreference       String?
+  currency             String?
+  salaryExpectation    String?
+  languagesSpoken      String?
+  availability         String?
+  noticePeriod         String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
+}
+
+model generations {
+  id                  String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  user_id             String
+  job_description     String
+  company_name        String    @db.VarChar(255)
+  hr_name             String?   @db.VarChar(255)
+  custom_prompt       String?
+  cover_letter        String
+  cold_email          String
+  job_requirements    Json?
+  company_research    Json?
+  user_qualifications Json?
+  writing_style       Json?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  updated_at          DateTime? @default(now()) @db.Timestamp(6)
+  users               User      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+
+  @@index([created_at(sort: Desc)], map: "idx_generations_created_at")
+  @@index([user_id], map: "idx_generations_user_id")
 }
