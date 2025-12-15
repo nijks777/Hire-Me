@@ -42,6 +42,9 @@ export default function ProfilePage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["personal"])
   );
+  const [githubUsername, setGithubUsername] = useState<string | null>(null);
+  const [githubConnectedAt, setGithubConnectedAt] = useState<string | null>(null);
+  const [githubConnecting, setGithubConnecting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -50,6 +53,20 @@ export default function ProfilePage() {
       return;
     }
     fetchProfile();
+
+    // Handle GitHub OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    const githubTempToken = params.get('github_temp_token');
+    const githubError = params.get('github_error');
+
+    if (githubTempToken) {
+      linkGithubAccount(githubTempToken);
+      // Clean URL
+      window.history.replaceState({}, '', '/profile');
+    } else if (githubError) {
+      alert(`GitHub connection failed: ${githubError}`);
+      window.history.replaceState({}, '', '/profile');
+    }
   }, [router]);
 
   const fetchProfile = async () => {
@@ -67,11 +84,74 @@ export default function ProfilePage() {
         if (data.profile) {
           setFormData(data.profile);
         }
+        if (data.github) {
+          setGithubUsername(data.github.githubUsername);
+          setGithubConnectedAt(data.github.githubConnectedAt);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const linkGithubAccount = async (tempToken: string) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/auth/github/link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ githubTempToken: tempToken }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGithubUsername(data.githubUsername);
+        setGithubConnectedAt(data.githubConnectedAt);
+        alert("GitHub account connected successfully!");
+      } else {
+        const error = await response.json();
+        alert(`Failed to connect GitHub: ${error.message}`);
+      }
+    } catch (error) {
+      console.error("Link GitHub error:", error);
+      alert("Failed to connect GitHub account");
+    }
+  };
+
+  const handleConnectGithub = () => {
+    setGithubConnecting(true);
+    window.location.href = "/api/auth/github";
+  };
+
+  const handleDisconnectGithub = async () => {
+    if (!confirm("Are you sure you want to disconnect your GitHub account?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/auth/github/disconnect", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setGithubUsername(null);
+        setGithubConnectedAt(null);
+        alert("GitHub account disconnected successfully!");
+      } else {
+        throw new Error("Failed to disconnect");
+      }
+    } catch (error) {
+      console.error("Disconnect GitHub error:", error);
+      alert("Failed to disconnect GitHub account");
     }
   };
 
@@ -120,7 +200,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <Header />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <p className="text-gray-900 dark:text-white">Loading profile...</p>
@@ -130,7 +210,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <Header />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -443,6 +523,76 @@ export default function ProfilePage() {
                   onChange={(v) => handleChange("noticePeriod", v)}
                   placeholder="2 weeks / 1 month"
                 />
+              </div>
+            </Section>
+
+            {/* GitHub Integration Section */}
+            <Section
+              title="GitHub Integration"
+              isExpanded={expandedSections.has("github")}
+              onToggle={() => toggleSection("github")}
+            >
+              <div className="space-y-4">
+                {githubUsername ? (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white dark:text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            Connected as <span className="font-bold">{githubUsername}</span>
+                          </p>
+                          {githubConnectedAt && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Connected on {new Date(githubConnectedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleDisconnectGithub}
+                        className="px-4 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-sm font-medium"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                    <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                      Your GitHub repositories will be used to enhance your resume and cover letters with real project data.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-10 h-10 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center shrink-0">
+                        <svg className="w-6 h-6 text-white dark:text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                          Connect Your GitHub Account
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                          Automatically import your repositories, projects, and tech stack to generate better resumes and cover letters with real project data.
+                        </p>
+                        <button
+                          onClick={handleConnectGithub}
+                          disabled={githubConnecting}
+                          className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
+                          </svg>
+                          <span>{githubConnecting ? "Connecting..." : "Connect GitHub"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </Section>
           </div>

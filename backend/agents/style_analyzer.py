@@ -2,17 +2,20 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from agents.state import AgentState
 from app.config import settings
+from utils.langsmith_config import trace_agent, get_traced_llm
 
+@trace_agent("style_analyzer", run_type="chain", tags=["job-application", "style-analysis", "agent-4"])
 def style_analyzer_agent(state: AgentState) -> AgentState:
     """
     Agent 4: Analyze user's writing style from demo files (cover letter & cold email)
     """
     print("✍️  Agent 4: Analyzing writing style...")
 
-    llm = ChatOpenAI(
+    llm = get_traced_llm(
         model="gpt-4o-mini",
         temperature=0.3,
-        api_key=settings.OPENAI_API_KEY
+        tags=["style-analysis", "writing"],
+        metadata={"agent": "style_analyzer", "step": 4}
     )
 
     try:

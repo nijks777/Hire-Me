@@ -23,14 +23,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user profile
+    // Get user profile and GitHub connection status
     const profile = await prisma.userProfile.findUnique({
       where: { userId: decoded.userId },
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        githubUsername: true,
+        githubConnectedAt: true,
+      },
     });
 
     return NextResponse.json(
       {
         profile: profile || null,
+        github: user || null,
       },
       { status: 200 }
     );

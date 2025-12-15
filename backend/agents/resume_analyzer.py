@@ -2,17 +2,20 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from agents.state import AgentState
 from app.config import settings
+from utils.langsmith_config import trace_agent, get_traced_llm
 
+@trace_agent("resume_analyzer", run_type="chain", tags=["job-application", "resume-analysis", "agent-3"])
 def resume_analyzer_agent(state: AgentState) -> AgentState:
     """
     Agent 3: Analyze user's resume and extract relevant qualifications
     """
     print("📄 Agent 3: Analyzing user resume...")
 
-    llm = ChatOpenAI(
+    llm = get_traced_llm(
         model="gpt-4o-mini",
         temperature=0.3,
-        api_key=settings.OPENAI_API_KEY
+        tags=["resume-analysis", "qualifications"],
+        metadata={"agent": "resume_analyzer", "step": 3}
     )
 
     try:

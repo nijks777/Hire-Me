@@ -2,7 +2,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from agents.state import AgentState
 from app.config import settings
+from utils.langsmith_config import trace_agent, get_traced_llm
 
+@trace_agent("content_generator", run_type="chain", tags=["job-application", "content-generation", "agent-5"])
 def content_generator_agent(state: AgentState) -> AgentState:
     """
     Agent 5: Generate personalized cover letter and cold email
@@ -14,10 +16,11 @@ def content_generator_agent(state: AgentState) -> AgentState:
     """
     print("📝 Agent 5: Generating cover letter and cold email...")
 
-    llm = ChatOpenAI(
+    llm = get_traced_llm(
         model="gpt-4o",
         temperature=0.7,
-        api_key=settings.OPENAI_API_KEY
+        tags=["content-generation", "cover-letter", "cold-email"],
+        metadata={"agent": "content_generator", "step": 5}
     )
 
     try:

@@ -1,46 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "An error occurred.");
+        setError(data.message || "Failed to send reset email");
+        return;
       }
 
-      // Redirect to reset password page with email
-      router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+      setSuccess(data.message || "If an account with that email exists, a password reset OTP has been sent.");
+
+      // Redirect to reset password page after 2 seconds
+      setTimeout(() => {
+        window.location.href = `/reset-password?email=${encodeURIComponent(email)}`;
+      }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
@@ -56,6 +59,11 @@ export default function ForgotPasswordPage() {
             {error && (
               <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
                 {error}
+              </div>
+            )}
+             {success && (
+              <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
+                {success}
               </div>
             )}
 

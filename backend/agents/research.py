@@ -2,7 +2,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from agents.state import AgentState
 from app.config import settings
+from utils.langsmith_config import trace_agent, get_traced_llm
 
+@trace_agent("research_agent", run_type="chain", tags=["job-application", "research", "agent-2"])
 def research_agent(state: AgentState) -> AgentState:
     """
     Agent 2: Research company information
@@ -10,10 +12,11 @@ def research_agent(state: AgentState) -> AgentState:
     """
     print("🔎 Agent 2: Researching company information...")
 
-    llm = ChatOpenAI(
+    llm = get_traced_llm(
         model="gpt-4o-mini",
         temperature=0.3,
-        api_key=settings.OPENAI_API_KEY
+        tags=["company-research", "analysis"],
+        metadata={"agent": "research_agent", "step": 2}
     )
 
     try:

@@ -12,6 +12,8 @@ interface User {
   resumeFileName?: string;
   coverLetterFileName?: string;
   coldEmailFileName?: string;
+  githubUsername?: string;
+  githubConnectedAt?: string;
 }
 
 export default function Header() {
@@ -232,6 +234,33 @@ export default function Header() {
       if (coldEmailInputRef.current) {
         coldEmailInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleDisconnectGithub = async () => {
+    if (!confirm("Are you sure you want to disconnect your GitHub account? Your repositories will no longer be used for generating content.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/auth/github/disconnect", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        alert("GitHub account disconnected successfully!");
+        // Refresh user data
+        await fetchUserData();
+      } else {
+        throw new Error("Failed to disconnect");
+      }
+    } catch (error) {
+      console.error("Disconnect GitHub error:", error);
+      alert("Failed to disconnect GitHub account. Please try again.");
     }
   };
 
@@ -539,6 +568,70 @@ export default function Header() {
                     onChange={handleColdEmailSelect}
                     className="hidden"
                   />
+                </div>
+
+                {/* GitHub Integration Section */}
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    GitHub Integration
+                  </p>
+                  {user.githubUsername ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded-lg">
+                        <svg
+                          className="w-5 h-5 text-green-600 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-700 dark:text-gray-300 truncate font-medium">
+                            {user.githubUsername}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Connected
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => window.open(`https://github.com/${user.githubUsername}`, '_blank')}
+                          className="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer flex items-center justify-center space-x-1"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
+                          </svg>
+                          <span>View</span>
+                        </button>
+                        <button
+                          onClick={handleDisconnectGithub}
+                          className="px-3 py-2 text-sm bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => window.location.href = "/api/auth/github"}
+                      className="w-full px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
+                      </svg>
+                      <span>Connect GitHub</span>
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    Auto-import your projects
+                  </p>
                 </div>
 
                 {/* Menu Items */}

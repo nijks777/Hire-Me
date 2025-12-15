@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
         coverLetterUploadedAt: true,
         coldEmailFileName: true,
         coldEmailUploadedAt: true,
+        githubUsername: true,
+        githubConnectedAt: true,
         createdAt: true,
       },
     });

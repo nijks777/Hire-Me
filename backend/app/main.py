@@ -18,10 +18,14 @@ from utils.database import (
     get_user_generations, get_generation_by_id, delete_generation
 )
 from utils.pdf_extractor import extract_text_from_file
+from utils.langsmith_startup import configure_langsmith
 from app.config import settings
 import json
 import asyncio
 from typing import AsyncGenerator
+
+# Configure LangSmith on startup
+configure_langsmith()
 
 app = FastAPI(
     title="Hire-Me Agent API",
@@ -607,6 +611,10 @@ SKILLS:
         errors=final_state["errors"],
         current_agent=final_state.get("current_agent")
     )
+
+# Include resume test routes
+from app.routes import resume_test
+app.include_router(resume_test.router)
 
 if __name__ == "__main__":
     import uvicorn
