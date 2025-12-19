@@ -33,19 +33,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware - Allow multiple ports for development
+# CORS middleware - Allow development and production origins
+import os
+
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+    "http://127.0.0.1:3003"
+]
+
+# Add production frontend URL if set
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://127.0.0.1:3002",
-        "http://127.0.0.1:3003"
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,12 +63,57 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Basic health check endpoint"""
     return {
         "status": "ok",
         "message": "Hire-Me Agent API is running",
         "version": "1.0.0"
     }
+
+@app.get("/health")
+async def health_check():
+    """
+    Detailed health check endpoint
+    Checks API, database, and environment configuration
+    """
+    import os
+    from sqlalchemy import create_engine, text
+
+    health_status = {
+        "status": "healthy",
+        "version": "1.0.0",
+        "api": "running",
+        "database": "unknown",
+        "openai_configured": False,
+        "langsmith_configured": False
+    }
+
+    # Check database connection
+    try:
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            engine = create_engine(database_url)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            health_status["database"] = "connected"
+        else:
+            health_status["database"] = "not_configured"
+            health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["database"] = f"error: {str(e)[:50]}"
+        health_status["status"] = "unhealthy"
+
+    # Check OpenAI API key
+    if os.getenv("OPENAI_API_KEY"):
+        health_status["openai_configured"] = True
+    else:
+        health_status["status"] = "degraded"
+
+    # Check LangSmith (optional)
+    if os.getenv("LANGSMITH_API_KEY"):
+        health_status["langsmith_configured"] = True
+
+    return health_status
 
 @app.post("/api/generate-stream")
 async def generate_stream(request: GenerateRequest):
