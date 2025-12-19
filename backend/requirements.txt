@@ -1,25 +1,42 @@
-fastapi
+# FastAPI & Server
+fastapi==0.121.2
 uvicorn[standard]
 python-multipart
-python-dotenv
-pydantic
-pydantic-settings
+python-dotenv==1.2.1
+pydantic==2.12.4
+pydantic-settings==2.12.0
+gunicorn==23.0.0
 
 # LangChain & LangGraph
-langchain
-langchain-openai
-langgraph
-langchain-core
-langsmith
+langchain==1.1.0
+langchain-openai==1.1.0
+langgraph==1.0.4
+langchain-core==1.1.0
+langsmith==0.4.49
+langgraph-checkpoint==3.0.1
+langchain-community==0.4.1
+
+# OpenAI
+openai==2.8.1
 
 # Database
-psycopg2-binary
+psycopg2-binary==2.9.11
 sqlalchemy
+alembic
 
 # Auth
 pyjwt
-passlib[bcrypt]
-python-jose[cryptography]
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.5.0
+bcrypt
 
 # Utils
 httpx
+python-dateutil
+typing-extensions
+
+# PDF Processing (if needed)
+pypdf==6.4.1
+
+# HTTP Client
+httpcore
