@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     // Fetch repositories
     const { data: repos } = await octokit.rest.repos.listForUser({
       username: user.githubUsername,
-      type: 'public',
+      type: 'all',
       sort: 'updated',
       per_page: 100,
     });

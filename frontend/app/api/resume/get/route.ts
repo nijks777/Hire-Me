@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Convert buffer to base64 for sending to client
-    const resumeBase64 = user.resumeData.toString('base64');
+    const resumeBase64 = Buffer.from(user.resumeData).toString('base64');
 
     return NextResponse.json({
       resume: {

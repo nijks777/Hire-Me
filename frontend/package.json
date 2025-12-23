@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@prisma/client": "^6.18.0",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/bcryptjs": "^2.4.6",
@@ -29,6 +30,7 @@
     "jspdf": "^3.0.4",
     "next": "^16.0.0",
     "octokit": "^5.0.5",
+    "pdf-parse": "^2.4.5",
     "postcss": "^8.5.6",
     "prisma": "^6.18.0",
     "react": "^19.2.0",

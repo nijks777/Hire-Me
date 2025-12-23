@@ -41,14 +41,19 @@ export async function POST(req: Request) {
     });
 
     // Send OTP via email
+    console.log(`🔄 Attempting to send email to: ${email}`);
+    console.log(`🔢 Generated OTP: ${otp}`);
+
     const emailSent = await sendPasswordResetEmail(email, otp);
 
     if (!emailSent) {
-      console.error(`Failed to send email to ${email}, but OTP was generated: ${otp}`);
+      console.error(`❌ Failed to send email to ${email}, but OTP was generated: ${otp}`);
+    } else {
+      console.log(`✅ Email sent successfully to ${email}`);
     }
 
     // Log OTP to console as backup (remove in production)
-    console.log(`Password reset OTP for ${email}: ${otp}`);
+    console.log(`🔐 Password reset OTP for ${email}: ${otp}`);
 
     return NextResponse.json({ message: "If an account with that email exists, a password reset OTP has been sent." });
 

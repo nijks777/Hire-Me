@@ -39,12 +39,17 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState<UserProfileData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["personal"])
   );
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
   const [githubConnectedAt, setGithubConnectedAt] = useState<string | null>(null);
   const [githubConnecting, setGithubConnecting] = useState(false);
+  const [coverLetterFileName, setCoverLetterFileName] = useState<string | null>(null);
+  const [coldEmailFileName, setColdEmailFileName] = useState<string | null>(null);
+  const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
+  const [uploadingColdEmail, setUploadingColdEmail] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -88,11 +93,70 @@ export default function ProfilePage() {
           setGithubUsername(data.github.githubUsername);
           setGithubConnectedAt(data.github.githubConnectedAt);
         }
+        if (data.coverLetterFileName) {
+          setCoverLetterFileName(data.coverLetterFileName);
+        }
+        if (data.coldEmailFileName) {
+          setColdEmailFileName(data.coldEmailFileName);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoFillFromResume = async () => {
+    setAutoFilling(true);
+    try {
+      const token = localStorage.getItem("access_token");
+
+      // First, get the resume
+      const resumeResponse = await fetch("/api/resume/get", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!resumeResponse.ok) {
+        alert("No resume found. Please upload your resume first from the header menu.");
+        return;
+      }
+
+      const resumeData = await resumeResponse.json();
+
+      // Parse the resume using AI
+      const parseResponse = await fetch("/api/resume/parse", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          resumeContent: resumeData.resume.content,
+          mimeType: resumeData.resume.mimeType,
+        }),
+      });
+
+      if (!parseResponse.ok) {
+        throw new Error("Failed to parse resume");
+      }
+
+      const parsedData = await parseResponse.json();
+
+      // Merge parsed data with existing form data
+      setFormData(prev => ({
+        ...prev,
+        ...parsedData.profile,
+      }));
+
+      alert("Profile auto-filled from resume successfully! Please review and save.");
+    } catch (error) {
+      console.error("Auto-fill error:", error);
+      alert("Failed to auto-fill from resume. Please try again or fill manually.");
+    } finally {
+      setAutoFilling(false);
     }
   };
 
@@ -155,6 +219,88 @@ export default function ProfilePage() {
     }
   };
 
+  const handleCoverLetterUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["application/pdf", "text/plain"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a PDF or TXT file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    setUploadingCoverLetter(true);
+    try {
+      const formData = new FormData();
+      formData.append("coverLetter", file);
+
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/cover-letter/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      alert("Demo cover letter uploaded successfully!");
+      await fetchProfile();
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload cover letter. Please try again.");
+    } finally {
+      setUploadingCoverLetter(false);
+    }
+  };
+
+  const handleColdEmailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["application/pdf", "text/plain"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a PDF or TXT file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    setUploadingColdEmail(true);
+    try {
+      const formData = new FormData();
+      formData.append("coldEmail", file);
+
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/cold-email/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      alert("Demo cold email uploaded successfully!");
+      await fetchProfile();
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload cold email. Please try again.");
+    } finally {
+      setUploadingColdEmail(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -200,36 +346,85 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen bg-black relative overflow-hidden">
+        {/* Matrix-style grid background */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: `linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }}></div>
+
         <Header />
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <p className="text-gray-900 dark:text-white">Loading profile...</p>
+        <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-cyan-500 border-t-transparent mb-4"></div>
+            <p className="text-cyan-400 font-mono font-bold">LOADING PROFILE<span className="animate-pulse">...</span></p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Matrix-style grid background */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: `linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px)`,
+        backgroundSize: '50px 50px'
+      }}></div>
+
+      {/* Animated neon orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-fuchsia-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-1/4 left-1/2 w-96 h-96 bg-emerald-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      {/* Scanline effect */}
+      <div className="absolute inset-0 pointer-events-none opacity-5">
+        <div className="h-full w-full" style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 65, 0.1) 2px, rgba(0, 255, 65, 0.1) 4px)'
+        }}></div>
+      </div>
+
       <Header />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-          {/* Header */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              User Profile Information
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-2">
-              Complete your profile to generate better cover letters and cold emails
-            </p>
-          </div>
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-black font-mono text-transparent bg-clip-text bg-linear-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 drop-shadow-[0_0_30px_rgba(34,211,238,0.5)]">
+                {'<'} USER PROFILE {'>'}
+              </h1>
+              <p className="text-emerald-300 font-mono mt-2 text-sm">
+                // Complete your profile to generate better content
+              </p>
+            </div>
 
-          {/* Form */}
+            {/* Auto-fill Button */}
+            <button
+              onClick={handleAutoFillFromResume}
+              disabled={autoFilling}
+              className="group px-6 py-3 bg-linear-to-r from-fuchsia-500 to-cyan-500 text-black font-mono font-black uppercase tracking-wider shadow-lg shadow-fuchsia-500/50 hover:shadow-fuchsia-500/80 transition-all duration-300 transform hover:scale-105 border-2 border-fuchsia-400 hover:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {autoFilling ? "AUTO-FILLING..." : "AUTO-FILL FROM RESUME"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Form Container */}
+        <div className="bg-black/60 backdrop-blur-lg border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/20">
+          {/* Form Sections */}
           <div className="p-6 space-y-4">
             {/* Personal Information Section */}
             <Section
-              title="Personal Information"
+              title="PERSONAL INFORMATION"
+              icon="👤"
               isExpanded={expandedSections.has("personal")}
               onToggle={() => toggleSection("personal")}
             >
@@ -288,14 +483,14 @@ export default function ProfilePage() {
                   value={formData.githubUrl || ""}
                   onChange={(v) => handleChange("githubUrl", v)}
                   placeholder="https://github.com/yourusername"
-                  className="md:col-span-2"
                 />
               </div>
             </Section>
 
             {/* Professional Information Section */}
             <Section
-              title="Professional Information"
+              title="PROFESSIONAL INFORMATION"
+              icon="💼"
               isExpanded={expandedSections.has("professional")}
               onToggle={() => toggleSection("professional")}
             >
@@ -330,7 +525,8 @@ export default function ProfilePage() {
 
             {/* Education Section */}
             <Section
-              title="Education"
+              title="EDUCATION"
+              icon="🎓"
               isExpanded={expandedSections.has("education")}
               onToggle={() => toggleSection("education")}
             >
@@ -367,7 +563,8 @@ export default function ProfilePage() {
 
             {/* Skills & Expertise Section */}
             <Section
-              title="Skills & Expertise"
+              title="SKILLS & EXPERTISE"
+              icon="⚡"
               isExpanded={expandedSections.has("skills")}
               onToggle={() => toggleSection("skills")}
             >
@@ -398,7 +595,8 @@ export default function ProfilePage() {
 
             {/* Work Experience Section */}
             <Section
-              title="Work Experience"
+              title="WORK EXPERIENCE"
+              icon="🏢"
               isExpanded={expandedSections.has("experience")}
               onToggle={() => toggleSection("experience")}
             >
@@ -413,7 +611,8 @@ export default function ProfilePage() {
 
             {/* Achievements & Projects Section */}
             <Section
-              title="Achievements & Projects"
+              title="ACHIEVEMENTS & PROJECTS"
+              icon="🏆"
               isExpanded={expandedSections.has("achievements")}
               onToggle={() => toggleSection("achievements")}
             >
@@ -437,7 +636,8 @@ export default function ProfilePage() {
 
             {/* Career Preferences Section */}
             <Section
-              title="Career Preferences"
+              title="CAREER PREFERENCES"
+              icon="🎯"
               isExpanded={expandedSections.has("preferences")}
               onToggle={() => toggleSection("preferences")}
             >
@@ -467,7 +667,7 @@ export default function ProfilePage() {
                     { value: "hybrid", label: "Hybrid" },
                   ]}
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Select
                     label="Currency"
                     value={formData.currency || ""}
@@ -475,13 +675,13 @@ export default function ProfilePage() {
                     options={[
                       { value: "", label: "Select currency" },
                       { value: "USD", label: "USD ($) - US Dollar" },
-                      { value: "EUR", label: "EUR (\u20ac) - Euro" },
-                      { value: "GBP", label: "GBP (\u00a3) - British Pound" },
+                      { value: "EUR", label: "EUR (€) - Euro" },
+                      { value: "GBP", label: "GBP (£) - British Pound" },
                       { value: "CAD", label: "CAD ($) - Canadian Dollar" },
                       { value: "AUD", label: "AUD ($) - Australian Dollar" },
-                      { value: "INR", label: "INR (\u20b9) - Indian Rupee" },
-                      { value: "JPY", label: "JPY (\u00a5) - Japanese Yen" },
-                      { value: "CNY", label: "CNY (\u00a5) - Chinese Yuan" },
+                      { value: "INR", label: "INR (₹) - Indian Rupee" },
+                      { value: "JPY", label: "JPY (¥) - Japanese Yen" },
+                      { value: "CNY", label: "CNY (¥) - Chinese Yuan" },
                       { value: "SGD", label: "SGD ($) - Singapore Dollar" },
                       { value: "CHF", label: "CHF (Fr) - Swiss Franc" },
                       { value: "SEK", label: "SEK (kr) - Swedish Krona" },
@@ -500,7 +700,8 @@ export default function ProfilePage() {
 
             {/* Additional Information Section */}
             <Section
-              title="Additional Information"
+              title="ADDITIONAL INFORMATION"
+              icon="📋"
               isExpanded={expandedSections.has("additional")}
               onToggle={() => toggleSection("additional")}
             >
@@ -528,66 +729,67 @@ export default function ProfilePage() {
 
             {/* GitHub Integration Section */}
             <Section
-              title="GitHub Integration"
+              title="GITHUB INTEGRATION"
+              icon="💻"
               isExpanded={expandedSections.has("github")}
               onToggle={() => toggleSection("github")}
             >
               <div className="space-y-4">
                 {githubUsername ? (
-                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="bg-emerald-500/10 border-2 border-emerald-500/50 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center">
-                          <svg className="w-6 h-6 text-white dark:text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                        <div className="w-10 h-10 bg-linear-to-br from-emerald-500 to-emerald-600 flex items-center justify-center border-2 border-emerald-400">
+                          <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
                             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            Connected as <span className="font-bold">{githubUsername}</span>
+                          <p className="text-sm font-bold text-emerald-400 font-mono">
+                            {'>'} CONNECTED: <span className="text-cyan-400">{githubUsername}</span>
                           </p>
                           {githubConnectedAt && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Connected on {new Date(githubConnectedAt).toLocaleDateString()}
+                            <p className="text-xs text-emerald-300/60 font-mono">
+                              // {new Date(githubConnectedAt).toLocaleDateString()}
                             </p>
                           )}
                         </div>
                       </div>
                       <button
                         onClick={handleDisconnectGithub}
-                        className="px-4 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-sm font-medium"
+                        className="px-4 py-2 border-2 border-red-500/50 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-mono font-bold uppercase"
                       >
-                        Disconnect
+                        DISCONNECT
                       </button>
                     </div>
-                    <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                      Your GitHub repositories will be used to enhance your resume and cover letters with real project data.
+                    <div className="mt-3 text-sm text-emerald-300/80 font-mono">
+                      // Your repositories will enhance your resume generation
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="bg-cyan-500/10 border-2 border-cyan-500/50 p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="w-10 h-10 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center shrink-0">
-                        <svg className="w-6 h-6 text-white dark:text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shrink-0 border-2 border-cyan-400">
+                        <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
                           <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                          Connect Your GitHub Account
+                        <h4 className="text-sm font-black text-cyan-400 mb-1 font-mono uppercase">
+                          {'>'} Connect GitHub Account
                         </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                          Automatically import your repositories, projects, and tech stack to generate better resumes and cover letters with real project data.
+                        <p className="text-sm text-emerald-300/80 mb-3 font-mono">
+                          // Auto-import repos and tech stack for better content
                         </p>
                         <button
                           onClick={handleConnectGithub}
                           disabled={githubConnecting}
-                          className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
+                          className="px-4 py-2 bg-linear-to-r from-cyan-500 to-fuchsia-500 text-black border-2 border-cyan-400 hover:from-fuchsia-500 hover:to-cyan-500 transition-colors font-mono font-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm shadow-lg shadow-cyan-500/50"
                         >
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
                           </svg>
-                          <span>{githubConnecting ? "Connecting..." : "Connect GitHub"}</span>
+                          <span>{githubConnecting ? "CONNECTING..." : "CONNECT GITHUB"}</span>
                         </button>
                       </div>
                     </div>
@@ -595,22 +797,132 @@ export default function ProfilePage() {
                 )}
               </div>
             </Section>
+
+            {/* Demo Cover Letter Upload Section */}
+            <Section
+              title="DEMO COVER LETTER (OPTIONAL)"
+              icon="📝"
+              isExpanded={expandedSections.has("coverLetter")}
+              onToggle={() => toggleSection("coverLetter")}
+            >
+              <div className="space-y-4">
+                <p className="text-sm text-emerald-300/80 font-mono">
+                  // Upload a sample to help AI understand your writing style
+                </p>
+                {coverLetterFileName ? (
+                  <div className="bg-emerald-500/10 border-2 border-emerald-500/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm font-bold text-cyan-400 font-mono">{coverLetterFileName}</span>
+                      </div>
+                      <label className="px-4 py-2 border-2 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors text-sm font-mono font-bold uppercase cursor-pointer">
+                        {uploadingCoverLetter ? "UPLOADING..." : "UPDATE"}
+                        <input
+                          type="file"
+                          accept=".pdf,.txt"
+                          onChange={handleCoverLetterUpload}
+                          disabled={uploadingCoverLetter}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="block">
+                    <div className="border-2 border-dashed border-cyan-500/30 p-6 text-center hover:border-cyan-500 transition-colors cursor-pointer bg-black/40">
+                      <svg className="mx-auto h-12 w-12 text-cyan-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="mt-2 text-sm text-cyan-400 font-mono font-bold">
+                        {uploadingCoverLetter ? "UPLOADING..." : "CLICK TO UPLOAD"}
+                      </p>
+                      <p className="text-xs text-emerald-300/60 font-mono mt-1">// PDF or TXT (Max 5MB)</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf,.txt"
+                      onChange={handleCoverLetterUpload}
+                      disabled={uploadingCoverLetter}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </Section>
+
+            {/* Demo Cold Email Upload Section */}
+            <Section
+              title="DEMO COLD EMAIL (OPTIONAL)"
+              icon="✉️"
+              isExpanded={expandedSections.has("coldEmail")}
+              onToggle={() => toggleSection("coldEmail")}
+            >
+              <div className="space-y-4">
+                <p className="text-sm text-emerald-300/80 font-mono">
+                  // Upload a sample to help AI learn your communication style
+                </p>
+                {coldEmailFileName ? (
+                  <div className="bg-emerald-500/10 border-2 border-emerald-500/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm font-bold text-cyan-400 font-mono">{coldEmailFileName}</span>
+                      </div>
+                      <label className="px-4 py-2 border-2 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors text-sm font-mono font-bold uppercase cursor-pointer">
+                        {uploadingColdEmail ? "UPLOADING..." : "UPDATE"}
+                        <input
+                          type="file"
+                          accept=".pdf,.txt"
+                          onChange={handleColdEmailUpload}
+                          disabled={uploadingColdEmail}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="block">
+                    <div className="border-2 border-dashed border-cyan-500/30 p-6 text-center hover:border-cyan-500 transition-colors cursor-pointer bg-black/40">
+                      <svg className="mx-auto h-12 w-12 text-cyan-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="mt-2 text-sm text-cyan-400 font-mono font-bold">
+                        {uploadingColdEmail ? "UPLOADING..." : "CLICK TO UPLOAD"}
+                      </p>
+                      <p className="text-xs text-emerald-300/60 font-mono mt-1">// PDF or TXT (Max 5MB)</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf,.txt"
+                      onChange={handleColdEmailUpload}
+                      disabled={uploadingColdEmail}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </Section>
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end gap-3 p-6 border-t-2 border-cyan-500/30">
             <button
               onClick={() => router.push("/dashboard")}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+              className="px-6 py-3 border-2 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer font-mono font-bold uppercase tracking-wide"
             >
-              Cancel
+              {'<'} CANCEL
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="px-6 py-3 bg-linear-to-r from-cyan-500 to-fuchsia-500 text-black border-2 border-cyan-400 hover:from-fuchsia-500 hover:to-cyan-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-mono font-black uppercase tracking-wide shadow-lg shadow-cyan-500/50"
             >
-              {saving ? "Saving..." : "Save Profile"}
+              {saving ? "SAVING..." : "SAVE PROFILE >"}
             </button>
           </div>
         </div>
@@ -622,41 +934,46 @@ export default function ProfilePage() {
 // Helper Components
 function Section({
   title,
+  icon,
   isExpanded,
   onToggle,
   children,
 }: {
   title: string;
+  icon: string;
   isExpanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+    <div className="border-2 border-cyan-500/30 bg-black/40 hover:border-cyan-500/50 transition-colors">
       <button
         onClick={onToggle}
-        className="w-full flex justify-between items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+        className="w-full flex justify-between items-center p-4 hover:bg-cyan-500/5 transition-colors cursor-pointer group"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {title}
-        </h3>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl group-hover:scale-110 transition-transform">{icon}</span>
+          <h3 className="text-lg font-black text-cyan-400 font-mono uppercase tracking-wide">
+            {'>'} {title}
+          </h3>
+        </div>
         <svg
-          className={`w-5 h-5 text-gray-600 dark:text-gray-400 transition-transform ${
+          className={`w-5 h-5 text-emerald-400 transition-transform ${
             isExpanded ? "rotate-180" : ""
           }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          strokeWidth={3}
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth={2}
             d="M19 9l-7 7-7-7"
           />
         </svg>
       </button>
-      {isExpanded && <div className="p-4 pt-0">{children}</div>}
+      {isExpanded && <div className="p-4 pt-0 border-t border-cyan-500/20">{children}</div>}
     </div>
   );
 }
@@ -668,7 +985,6 @@ function Input({
   placeholder,
   type = "text",
   step,
-  className = "",
 }: {
   label: string;
   value: string;
@@ -676,12 +992,11 @@ function Input({
   placeholder?: string;
   type?: string;
   step?: string;
-  className?: string;
 }) {
   return (
-    <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {label}
+    <div>
+      <label className="block text-sm font-bold text-emerald-400 mb-2 font-mono uppercase tracking-wide">
+        {'>'} {label}
       </label>
       <input
         type={type}
@@ -689,7 +1004,7 @@ function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white cursor-text"
+        className="w-full px-4 py-2 border-2 border-cyan-500/30 bg-black/60 text-cyan-300 focus:border-cyan-500 focus:outline-none transition-colors cursor-text font-mono placeholder-emerald-300/30"
       />
     </div>
   );
@@ -710,15 +1025,15 @@ function Textarea({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {label}
+      <label className="block text-sm font-bold text-emerald-400 mb-2 font-mono uppercase tracking-wide">
+        {'>'} {label}
       </label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none cursor-text"
+        className="w-full px-4 py-2 border-2 border-cyan-500/30 bg-black/60 text-cyan-300 focus:border-cyan-500 focus:outline-none transition-colors resize-none cursor-text font-mono placeholder-emerald-300/30"
       />
     </div>
   );
@@ -737,16 +1052,16 @@ function Select({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {label}
+      <label className="block text-sm font-bold text-emerald-400 mb-2 font-mono uppercase tracking-wide">
+        {'>'} {label}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white cursor-pointer"
+        className="w-full px-4 py-2 border-2 border-cyan-500/30 bg-black/60 text-cyan-300 focus:border-cyan-500 focus:outline-none transition-colors cursor-pointer font-mono"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option key={opt.value} value={opt.value} className="bg-black text-cyan-300">
             {opt.label}
           </option>
         ))}

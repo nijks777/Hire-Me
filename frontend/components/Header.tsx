@@ -21,12 +21,8 @@ export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
-  const [uploadingColdEmail, setUploadingColdEmail] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const coverLetterInputRef = useRef<HTMLInputElement>(null);
-  const coldEmailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Get user info from localStorage (simplified for now)
@@ -133,110 +129,6 @@ export default function Header() {
     }
   };
 
-  const handleCoverLetterSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type (PDF and TXT)
-    const allowedTypes = ["application/pdf", "text/plain"];
-
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please upload a PDF or TXT file");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
-      return;
-    }
-
-    setUploadingCoverLetter(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("coverLetter", file);
-
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/cover-letter/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      alert("Cover letter uploaded successfully!");
-
-      // Refresh user data
-      await fetchUserData();
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Failed to upload cover letter. Please try again.");
-    } finally {
-      setUploadingCoverLetter(false);
-      if (coverLetterInputRef.current) {
-        coverLetterInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleColdEmailSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type (PDF and TXT)
-    const allowedTypes = ["application/pdf", "text/plain"];
-
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please upload a PDF or TXT file");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
-      return;
-    }
-
-    setUploadingColdEmail(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("coldEmail", file);
-
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/cold-email/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      alert("Cold email uploaded successfully!");
-
-      // Refresh user data
-      await fetchUserData();
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Failed to upload cold email. Please try again.");
-    } finally {
-      setUploadingColdEmail(false);
-      if (coldEmailInputRef.current) {
-        coldEmailInputRef.current.value = "";
-      }
-    }
-  };
-
   const handleDisconnectGithub = async () => {
     if (!confirm("Are you sure you want to disconnect your GitHub account? Your repositories will no longer be used for generating content.")) {
       return;
@@ -267,56 +159,44 @@ export default function Header() {
   if (!user) return null;
 
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+    <header className="bg-black/80 backdrop-blur-md shadow-lg border-b-2 border-cyan-500/30 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
-          <Link href="/dashboard" className="flex items-center cursor-pointer">
-            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">
-              Hire-Me
+          <Link href="/dashboard" className="flex items-center cursor-pointer group">
+            <h1 className="text-xl font-black font-mono bg-clip-text text-transparent bg-linear-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 group-hover:drop-shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all">
+              {'<'} HIRE-ME {'>'}
             </h1>
           </Link>
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-6">
             <Link
-              href="/dashboard"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/generate"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
-            >
-              Generate
-            </Link>
-            <Link
               href="/history"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
+              className="text-emerald-300 hover:text-cyan-400 font-mono font-bold text-sm uppercase tracking-wide transition-all hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] cursor-pointer"
             >
-              History
+              {'>'} History
             </Link>
             <Link
               href="/profile"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
+              className="text-emerald-300 hover:text-cyan-400 font-mono font-bold text-sm uppercase tracking-wide transition-all hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] cursor-pointer"
             >
-              User Info
+              {'>'} User Info
             </Link>
 
             {/* Credits Badge */}
             {user && (
-              <div className="flex items-center space-x-2 px-4 py-2 bg-linear-to-r from-purple-500 to-blue-500 rounded-full shadow-lg">
+              <div className="flex items-center space-x-2 px-4 py-2 bg-linear-to-r from-cyan-500 to-fuchsia-500 border-2 border-cyan-400 shadow-lg shadow-cyan-500/50">
                 <svg
-                  className="w-5 h-5 text-white"
+                  className="w-5 h-5 text-black"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
                   <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
                 </svg>
-                <span className="text-white font-bold text-sm">
-                  {user.credits} Credits
+                <span className="text-black font-black text-sm font-mono">
+                  {user.credits} CREDITS
                 </span>
               </div>
             )}
@@ -326,31 +206,31 @@ export default function Header() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center space-x-3 focus:outline-none cursor-pointer"
+              className="flex items-center space-x-3 focus:outline-none cursor-pointer group"
             >
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+              <div className="w-10 h-10 bg-linear-to-br from-cyan-500 to-fuchsia-500 flex items-center justify-center text-black font-black border-2 border-cyan-400 shadow-lg shadow-cyan-500/50 group-hover:rotate-12 transition-transform">
                 {user.name.charAt(0).toUpperCase()}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                <p className="text-sm font-bold text-cyan-400 font-mono">
                   {user.name}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-emerald-300 font-mono">
                   {user.email}
                 </p>
               </div>
               <svg
-                className={`w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform ${
+                className={`w-4 h-4 text-cyan-400 transition-transform ${
                   isDropdownOpen ? "rotate-180" : ""
                 }`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                strokeWidth={3}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
                   d="M19 9l-7 7-7-7"
                 />
               </svg>
@@ -358,74 +238,74 @@ export default function Header() {
 
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+              <div className="absolute right-0 mt-2 w-72 bg-black/95 backdrop-blur-lg border-2 border-cyan-500/50 shadow-lg shadow-cyan-500/50 py-2 z-100">
                 {/* User Info */}
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <div className="px-4 py-3 border-b border-cyan-500/30">
+                  <p className="text-sm font-bold text-cyan-400 font-mono">
                     {user.name}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <p className="text-xs text-emerald-300 font-mono truncate">
                     {user.email}
                   </p>
                 </div>
 
                 {/* Resume Upload Section */}
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    Resume
+                <div className="px-4 py-3 border-b border-cyan-500/30">
+                  <p className="text-xs text-emerald-400 font-mono mb-2 uppercase tracking-wide">
+                    {'>'} Resume
                   </p>
                   {user.resumeFileName ? (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2 text-sm">
                         <svg
-                          className="w-5 h-5 text-green-600"
+                          className="w-5 h-5 text-emerald-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          strokeWidth={3}
                         >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={2}
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        <span className="text-gray-700 dark:text-gray-300 truncate">
+                        <span className="text-cyan-300 font-mono truncate text-xs">
                           {user.resumeFileName}
                         </span>
                       </div>
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
-                        className="w-full px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 cursor-pointer"
+                        className="w-full px-3 py-2 text-sm bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/30 hover:border-cyan-400 transition-colors disabled:opacity-50 cursor-pointer font-mono font-bold"
                       >
-                        {uploading ? "Uploading..." : "Update Resume"}
+                        {uploading ? "UPLOADING..." : "UPDATE RESUME"}
                       </button>
                     </div>
                   ) : (
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
+                      className="w-full px-4 py-2 bg-linear-to-r from-cyan-500 to-fuchsia-500 text-black border-2 border-cyan-400 hover:from-fuchsia-500 hover:to-cyan-500 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer font-mono font-black shadow-lg shadow-cyan-500/50"
                     >
                       <svg
                         className="w-5 h-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
+                        strokeWidth={3}
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={2}
                           d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                         />
                       </svg>
-                      <span>{uploading ? "Uploading..." : "Upload Your Resume"}</span>
+                      <span>{uploading ? "UPLOADING..." : "UPLOAD RESUME"}</span>
                     </button>
                   )}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                    PDF or Word (Max 5MB)
+                  <p className="text-xs text-emerald-400/60 mt-2 font-mono">
+                    // PDF or Word (Max 5MB)
                   </p>
                   <input
                     ref={fileInputRef}
@@ -436,210 +316,76 @@ export default function Header() {
                   />
                 </div>
 
-                {/* Cover Letter Upload Section */}
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    Demo Cover Letter
-                  </p>
-                  {user.coverLetterFileName ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <svg
-                          className="w-5 h-5 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <span className="text-gray-700 dark:text-gray-300 truncate">
-                          {user.coverLetterFileName}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => coverLetterInputRef.current?.click()}
-                        disabled={uploadingCoverLetter}
-                        className="w-full px-3 py-2 text-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50 cursor-pointer"
-                      >
-                        {uploadingCoverLetter ? "Uploading..." : "Update Cover Letter"}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => coverLetterInputRef.current?.click()}
-                      disabled={uploadingCoverLetter}
-                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                      </svg>
-                      <span>{uploadingCoverLetter ? "Uploading..." : "Upload Cover Letter"}</span>
-                    </button>
-                  )}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                    PDF or TXT (Max 5MB)
-                  </p>
-                  <input
-                    ref={coverLetterInputRef}
-                    type="file"
-                    accept=".pdf,.txt"
-                    onChange={handleCoverLetterSelect}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* Cold Email Upload Section */}
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    Demo Cold Email
-                  </p>
-                  {user.coldEmailFileName ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <svg
-                          className="w-5 h-5 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <span className="text-gray-700 dark:text-gray-300 truncate">
-                          {user.coldEmailFileName}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => coldEmailInputRef.current?.click()}
-                        disabled={uploadingColdEmail}
-                        className="w-full px-3 py-2 text-sm bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors disabled:opacity-50 cursor-pointer"
-                      >
-                        {uploadingColdEmail ? "Uploading..." : "Update Cold Email"}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => coldEmailInputRef.current?.click()}
-                      disabled={uploadingColdEmail}
-                      className="w-full px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                      </svg>
-                      <span>{uploadingColdEmail ? "Uploading..." : "Upload Cold Email"}</span>
-                    </button>
-                  )}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                    PDF or TXT (Max 5MB)
-                  </p>
-                  <input
-                    ref={coldEmailInputRef}
-                    type="file"
-                    accept=".pdf,.txt"
-                    onChange={handleColdEmailSelect}
-                    className="hidden"
-                  />
-                </div>
-
                 {/* GitHub Integration Section */}
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    GitHub Integration
+                <div className="px-4 py-3 border-b border-cyan-500/30">
+                  <p className="text-xs text-emerald-400 font-mono mb-2 uppercase tracking-wide">
+                    {'>'} GitHub Integration
                   </p>
                   {user.githubUsername ? (
                     <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded-lg">
+                      <div className="flex items-center space-x-2 text-sm bg-emerald-500/10 border border-emerald-500/30 p-2">
                         <svg
-                          className="w-5 h-5 text-green-600 shrink-0"
+                          className="w-5 h-5 text-emerald-400 shrink-0"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          strokeWidth={3}
                         >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={2}
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
                         <div className="flex-1 min-w-0">
-                          <p className="text-gray-700 dark:text-gray-300 truncate font-medium">
+                          <p className="text-cyan-300 truncate font-bold font-mono text-xs">
                             {user.githubUsername}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Connected
+                          <p className="text-xs text-emerald-400 font-mono">
+                            CONNECTED
                           </p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => window.open(`https://github.com/${user.githubUsername}`, '_blank')}
-                          className="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer flex items-center justify-center space-x-1"
+                          className="px-3 py-2 text-sm bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/30 hover:border-cyan-400 transition-colors cursor-pointer flex items-center justify-center space-x-1 font-mono font-bold"
                         >
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
                           </svg>
-                          <span>View</span>
+                          <span>VIEW</span>
                         </button>
                         <button
                           onClick={handleDisconnectGithub}
-                          className="px-3 py-2 text-sm bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
+                          className="px-3 py-2 text-sm bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 hover:border-red-400 transition-colors cursor-pointer font-mono font-bold"
                         >
-                          Disconnect
+                          DISCONNECT
                         </button>
                       </div>
                     </div>
                   ) : (
                     <button
                       onClick={() => window.location.href = "/api/auth/github"}
-                      className="w-full px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2 cursor-pointer"
+                      className="w-full px-4 py-2 bg-white text-black border-2 border-white hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2 cursor-pointer font-mono font-black shadow-lg"
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
                       </svg>
-                      <span>Connect GitHub</span>
+                      <span>CONNECT GITHUB</span>
                     </button>
                   )}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                    Auto-import your projects
+                  <p className="text-xs text-emerald-400/60 mt-2 font-mono">
+                    // Auto-import your projects
                   </p>
                 </div>
 
                 {/* Menu Items */}
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 border-t border-cyan-500/30 cursor-pointer font-mono font-bold uppercase tracking-wide hover:text-red-300 transition-colors"
                 >
-                  Logout
+                  {'>'} LOGOUT
                 </button>
               </div>
             )}

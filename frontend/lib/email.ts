@@ -1,14 +1,29 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendPasswordResetEmail(email: string, otp: string) {
   try {
-    // NOTE: With test domain, emails only go to jalaj.ka.sharma@gmail.com
+    // Initialize Resend inside the function to ensure env vars are loaded
+    const apiKey = process.env.RESEND_API_KEY;
+
+    console.log(`📧 [email.ts] Sending password reset email...`);
+    console.log(`📧 [email.ts] From: Hire-Me <onboarding@resend.dev>`);
+    console.log(`📧 [email.ts] To: Jalaj.ka.sharma@gmail.com`);
+    console.log(`📧 [email.ts] OTP: ${otp}`);
+    console.log(`📧 [email.ts] API Key present: ${apiKey ? 'YES' : 'NO'}`);
+    console.log(`📧 [email.ts] API Key value: ${apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'}`);
+
+    if (!apiKey) {
+      console.error('❌ [email.ts] RESEND_API_KEY is not set in environment variables!');
+      return false;
+    }
+
+    const resend = new Resend(apiKey);
+
+    // NOTE: With test domain, emails only go to Jalaj.ka.sharma@gmail.com
     // To send to other emails, verify a domain at resend.com/domains
     const { data, error } = await resend.emails.send({
       from: 'Hire-Me <onboarding@resend.dev>',
-      to: ['jalaj.ka.sharma@gmail.com'], // Test domain restriction
+      to: ['Jalaj.ka.sharma@gmail.com'], // Test domain restriction - use exact case from DB
       subject: 'Password Reset OTP - Hire-Me',
       html: `
         <!DOCTYPE html>
@@ -54,14 +69,16 @@ export async function sendPasswordResetEmail(email: string, otp: string) {
     });
 
     if (error) {
-      console.error('Resend error:', error);
+      console.error('❌ [email.ts] Resend API error:', JSON.stringify(error, null, 2));
       return false;
     }
 
-    console.log(`Password reset email sent to ${email}`, data);
+    console.log(`✅ [email.ts] Password reset email sent successfully!`);
+    console.log(`📬 [email.ts] Email ID: ${data?.id}`);
+    console.log(`📬 [email.ts] Full response:`, JSON.stringify(data, null, 2));
     return true;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('❌ [email.ts] Exception while sending email:', error);
     return false;
   }
 }

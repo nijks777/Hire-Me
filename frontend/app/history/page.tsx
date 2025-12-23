@@ -19,11 +19,6 @@ interface Generation {
   created_at: string;
 }
 
-interface EditableGeneration extends Generation {
-  editedCoverLetter?: string;
-  editedColdEmail?: string;
-}
-
 export default function HistoryPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -167,70 +162,98 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Matrix-style grid background */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: `linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px)`,
+        backgroundSize: '50px 50px'
+      }}></div>
+
+      {/* Animated neon orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-fuchsia-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-1/4 left-1/2 w-96 h-96 bg-emerald-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      {/* Scanline effect */}
+      <div className="absolute inset-0 pointer-events-none opacity-5">
+        <div className="h-full w-full" style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 65, 0.1) 2px, rgba(0, 255, 65, 0.1) 4px)'
+        }}></div>
+      </div>
+
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Generation History
+          <h1 className="text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 drop-shadow-[0_0_30px_rgba(34,211,238,0.5)]">
+            {'<'} GENERATION HISTORY {'>'}
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            View and manage your past document generations
+          <p className="text-emerald-300 font-mono mt-2 text-sm">
+            // View and manage your past document generations
           </p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-cyan-500 border-t-transparent mb-4"></div>
+              <p className="text-cyan-400 font-mono font-bold">LOADING HISTORY<span className="animate-pulse">...</span></p>
+            </div>
           </div>
         ) : generations.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="bg-black/60 backdrop-blur-lg border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/20 p-12 text-center">
             <svg
-              className="w-16 h-16 mx-auto mb-4 text-gray-400"
+              className="w-16 h-16 mx-auto mb-4 text-cyan-400/60"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              strokeWidth={2}
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              No generations yet
+            <p className="text-emerald-300 font-mono mb-2 text-lg font-bold">
+              {'>'} NO GENERATIONS YET
+            </p>
+            <p className="text-emerald-300/60 font-mono mb-6 text-sm">
+              // Start by creating your first document
             </p>
             <button
               onClick={() => router.push("/generate")}
-              className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all"
+              className="px-8 py-3 bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-black font-mono font-black uppercase tracking-wider shadow-lg shadow-fuchsia-500/50 hover:shadow-fuchsia-500/80 transition-all duration-300 transform hover:scale-105 border-2 border-fuchsia-400 hover:border-cyan-400"
             >
-              Create Your First Generation
+              CREATE FIRST GENERATION
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Generations List */}
             <div className="lg:col-span-1 space-y-3">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                All Generations ({generations.length})
+              <h2 className="text-lg font-black font-mono text-cyan-400 mb-4 flex items-center">
+                <span className="text-fuchsia-400 mr-2">{'>'}</span> ALL GENERATIONS
+                <span className="ml-2 px-2 py-1 bg-cyan-500/20 border border-cyan-500/50 text-xs">{generations.length}</span>
               </h2>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
                 {generations.map((gen) => (
                   <div
                     key={gen.id}
                     onClick={() => setSelectedGeneration(gen)}
-                    className={`p-4 rounded-lg cursor-pointer transition-all ${
-                      selectedGeneration?.id === gen.id
-                        ? "bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500"
-                        : "bg-white dark:bg-gray-800 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
-                    }`}
+                    className={`p-4 cursor-pointer transition-all duration-300 border-2 ${selectedGeneration?.id === gen.id
+                        ? "bg-gradient-to-r from-fuchsia-500/20 to-cyan-500/20 border-fuchsia-500 shadow-lg shadow-fuchsia-500/50"
+                        : "bg-black/40 backdrop-blur-sm border-cyan-500/30 hover:border-cyan-500/60 hover:bg-black/60"
+                      }`}
                   >
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                    <h3 className="font-bold font-mono text-cyan-300 truncate flex items-center">
+                      <span className="text-fuchsia-400 mr-2">▸</span>
                       {gen.company_name}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-emerald-300/60 font-mono mt-1">
                       {formatDate(gen.created_at)}
                     </p>
                   </div>
@@ -241,47 +264,49 @@ export default function HistoryPage() {
             {/* Generation Details */}
             <div className="lg:col-span-2">
               {selectedGeneration ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                <div className="bg-black/60 backdrop-blur-lg border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/20 p-6">
+                  {/* Info Banner */}
+                  <div className="bg-cyan-500/10 border border-cyan-500/50 p-4 mb-6">
                     <div className="flex items-start space-x-3">
-                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
                       <div>
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                          ✏️ Edit these documents as needed
+                        <p className="text-sm font-bold text-cyan-300 font-mono">
+                          {'>'} EDIT MODE ENABLED
                         </p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                          Your changes aren't saved to history - make edits and then copy or download
+                        <p className="text-xs text-emerald-300/60 font-mono mt-1">
+                          // Changes aren't saved to history - edit then copy or download
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mb-6">
+                  {/* Header with Delete */}
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-cyan-500/30">
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <h2 className="text-2xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-400">
                         {selectedGeneration.company_name}
                       </h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Generated on {formatDate(selectedGeneration.created_at)}
+                      <p className="text-sm text-emerald-300/60 font-mono mt-1">
+                        // Generated on {formatDate(selectedGeneration.created_at)}
                       </p>
                     </div>
                     <button
                       onClick={() => handleDelete(selectedGeneration.id)}
-                      className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all"
+                      className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white font-mono font-bold uppercase border-2 border-red-400 hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-500/30 hover:shadow-red-500/50 transform hover:scale-105"
                     >
-                      Delete
+                      DELETE
                     </button>
                   </div>
 
                   {/* Job Description */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Job Description
+                    <h3 className="text-lg font-black font-mono text-cyan-400 mb-2 flex items-center">
+                      <span className="text-fuchsia-400 mr-2">{'>'}</span> JOB DESCRIPTION
                     </h3>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg max-h-32 overflow-y-auto">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    <div className="bg-black/40 border border-cyan-500/30 p-4 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
+                      <p className="text-sm text-emerald-200 font-mono whitespace-pre-wrap">
                         {selectedGeneration.job_description}
                       </p>
                     </div>
@@ -290,10 +315,10 @@ export default function HistoryPage() {
                   {/* Cover Letter - Editable */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Cover Letter (Editable)
+                      <h3 className="text-lg font-black font-mono text-cyan-400 flex items-center">
+                        <span className="text-fuchsia-400 mr-2">{'>'}</span> COVER LETTER (EDITABLE)
                       </h3>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-emerald-300/60 font-mono">
                         {editedCoverLetter.length} characters
                       </span>
                     </div>
@@ -301,8 +326,11 @@ export default function HistoryPage() {
                       value={editedCoverLetter}
                       onChange={(e) => setEditedCoverLetter(e.target.value)}
                       rows={15}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-sm resize-none mb-3"
+                      className="w-full px-4 py-3 bg-black/40 border-2 border-cyan-500/30 focus:border-fuchsia-500 focus:outline-none text-emerald-200 font-mono text-sm resize-none mb-3 transition-colors scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent"
                       placeholder="Cover letter content..."
+                      style={{
+                        boxShadow: '0 0 20px rgba(6, 182, 212, 0.1)'
+                      }}
                     />
                     <div className="flex space-x-3">
                       <button
@@ -310,19 +338,19 @@ export default function HistoryPage() {
                           navigator.clipboard.writeText(editedCoverLetter);
                           alert("Cover letter copied to clipboard!");
                         }}
-                        className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center space-x-2"
+                        className="flex-1 py-2 px-4 bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-black font-mono font-bold uppercase border-2 border-cyan-400 hover:from-fuchsia-500 hover:to-cyan-500 transition-all shadow-lg shadow-cyan-500/30 hover:shadow-fuchsia-500/50 flex items-center justify-center space-x-2 transform hover:scale-105"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
-                        <span>Copy</span>
+                        <span>COPY</span>
                       </button>
                       <button
                         onClick={() => handleDownloadPDF(editedCoverLetter, "Cover_Letter")}
-                        className="flex-1 py-2 px-4 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all flex items-center justify-center space-x-2"
+                        className="flex-1 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-black font-mono font-bold uppercase border-2 border-emerald-400 hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 flex items-center justify-center space-x-2 transform hover:scale-105"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <span>PDF</span>
                       </button>
@@ -332,10 +360,10 @@ export default function HistoryPage() {
                   {/* Cold Email - Editable */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Cold Email (Editable)
+                      <h3 className="text-lg font-black font-mono text-cyan-400 flex items-center">
+                        <span className="text-fuchsia-400 mr-2">{'>'}</span> COLD EMAIL (EDITABLE)
                       </h3>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-emerald-300/60 font-mono">
                         {editedColdEmail.length} characters
                       </span>
                     </div>
@@ -343,8 +371,11 @@ export default function HistoryPage() {
                       value={editedColdEmail}
                       onChange={(e) => setEditedColdEmail(e.target.value)}
                       rows={15}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-sm resize-none mb-3"
+                      className="w-full px-4 py-3 bg-black/40 border-2 border-cyan-500/30 focus:border-fuchsia-500 focus:outline-none text-emerald-200 font-mono text-sm resize-none mb-3 transition-colors scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent"
                       placeholder="Cold email content..."
+                      style={{
+                        boxShadow: '0 0 20px rgba(6, 182, 212, 0.1)'
+                      }}
                     />
                     <div className="flex space-x-3">
                       <button
@@ -352,19 +383,19 @@ export default function HistoryPage() {
                           navigator.clipboard.writeText(editedColdEmail);
                           alert("Cold email copied to clipboard!");
                         }}
-                        className="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center space-x-2"
+                        className="flex-1 py-2 px-4 bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-black font-mono font-bold uppercase border-2 border-cyan-400 hover:from-fuchsia-500 hover:to-cyan-500 transition-all shadow-lg shadow-cyan-500/30 hover:shadow-fuchsia-500/50 flex items-center justify-center space-x-2 transform hover:scale-105"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
-                        <span>Copy</span>
+                        <span>COPY</span>
                       </button>
                       <button
                         onClick={() => handleDownloadPDF(editedColdEmail, "Cold_Email")}
-                        className="flex-1 py-2 px-4 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all flex items-center justify-center space-x-2"
+                        className="flex-1 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-black font-mono font-bold uppercase border-2 border-emerald-400 hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 flex items-center justify-center space-x-2 transform hover:scale-105"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <span>PDF</span>
                       </button>
@@ -372,22 +403,25 @@ export default function HistoryPage() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-12 text-center">
+                <div className="bg-black/60 backdrop-blur-lg border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/20 p-12 text-center">
                   <svg
-                    className="w-16 h-16 mx-auto mb-4 text-gray-400"
+                    className="w-16 h-16 mx-auto mb-4 text-cyan-400/60"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    strokeWidth={2}
                   >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
                       d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
                     />
                   </svg>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Select a generation to view details
+                  <p className="text-emerald-300 font-mono text-lg font-bold">
+                    {'>'} SELECT A GENERATION
+                  </p>
+                  <p className="text-emerald-300/60 font-mono text-sm mt-2">
+                    // Click on a generation to view details
                   </p>
                 </div>
               )}
