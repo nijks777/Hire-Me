@@ -36,6 +36,5 @@ def configure_langsmith():
     return langsmith_enabled
 
 
-# Auto-configure on import
-if __name__ != "__main__":
-    configure_langsmith()
+# Note: configure_langsmith() is called explicitly in app/main.py
+# This prevents duplicate messages on import

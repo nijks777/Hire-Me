@@ -40,3 +40,14 @@ pypdf==6.4.1
 
 # HTTP Client
 httpcore
+
+# Web Search (Tavily)
+tavily-python==0.5.0
+
+# GitHub Integration & MCP
+PyGithub
+mcp
+
+# Resume Processing & ATS
+python-docx
+markdown

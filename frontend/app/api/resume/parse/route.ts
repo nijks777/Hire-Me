@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import Anthropic from '@anthropic-ai/sdk';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,9 +40,10 @@ export async function POST(request: NextRequest) {
     // Convert to text based on mime type
     if (mimeType === 'application/pdf') {
       try {
-        // For PDF, use pdf-parse to extract text
-        console.log('Loading pdf-parse module...');
-        const pdfParse = (await import('pdf-parse')) as any;
+        // For PDF, use pdf-parse Node.js version
+        console.log('Loading pdf-parse/node module...');
+        // @ts-ignore - pdf-parse has ESM export issues with TypeScript
+        const { default: pdfParse } = await import('pdf-parse/node');
         console.log('Parsing PDF buffer...');
         const pdfData = await pdfParse(resumeBuffer);
         resumeText = pdfData.text;
@@ -62,66 +58,8 @@ export async function POST(request: NextRequest) {
       console.log('Text document parsed, length:', resumeText.length);
     }
 
-    // Now parse the resume text using Claude
-    const parseResponse = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: `You are an expert resume parser. Extract the following information from this resume and return it as a JSON object. Only extract information that is explicitly present in the resume. Use null for fields that are not found.
-
-Resume Text:
-${resumeText}
-
-Extract and return ONLY a valid JSON object with these fields:
-{
-  "phoneNumber": string or null,
-  "country": string (2-letter country code like "US", "IN", etc.) or null,
-  "location": string (city, state/region) or null,
-  "linkedinUrl": string or null,
-  "portfolioUrl": string or null,
-  "githubUrl": string or null,
-  "currentJobTitle": string or null,
-  "yearsOfExperience": number or null,
-  "professionalSummary": string or null,
-  "highestDegree": string or null,
-  "fieldOfStudy": string or null,
-  "university": string or null,
-  "graduationYear": number or null,
-  "workExperience": string (formatted as a list of roles and companies) or null,
-  "technicalSkills": string (comma-separated list) or null,
-  "softSkills": string (comma-separated list) or null,
-  "certifications": string (comma-separated list) or null,
-  "keyAchievements": string (newline-separated list of achievements) or null,
-  "notableProjects": string (newline-separated list of projects with brief descriptions) or null,
-  "targetRoles": string (comma-separated) or null,
-  "industriesOfInterest": string (comma-separated) or null,
-  "workPreference": string ("remote", "on-site", "hybrid") or null,
-  "currency": string (3-letter code like "USD", "INR") or null,
-  "salaryExpectation": string or null,
-  "languagesSpoken": string (comma-separated) or null,
-  "availability": string or null,
-  "noticePeriod": string or null
-}
-
-Return ONLY the JSON object, no additional text or explanation.`,
-        },
-      ],
-    });
-
-    const parsedContent = parseResponse.content[0].type === 'text' ? parseResponse.content[0].text : '{}';
-
-    // Extract JSON from the response (in case Claude adds any extra text)
-    let jsonMatch = parsedContent.match(/\{[\s\S]*\}/);
-    let profileData;
-
-    if (jsonMatch) {
-      profileData = JSON.parse(jsonMatch[0]);
-    } else {
-      // Fallback if no JSON found
-      profileData = JSON.parse(parsedContent);
-    }
+    // Parse resume using pattern matching (no AI needed!)
+    const profileData = parseResumeText(resumeText);
 
     // Clean up the data - remove null values
     const cleanedProfile: any = {};
@@ -130,6 +68,8 @@ Return ONLY the JSON object, no additional text or explanation.`,
         cleanedProfile[key] = value;
       }
     }
+
+    console.log('Extracted fields:', Object.keys(cleanedProfile).length);
 
     return NextResponse.json({
       success: true,
@@ -145,4 +85,166 @@ Return ONLY the JSON object, no additional text or explanation.`,
       { status: 500 }
     );
   }
+}
+
+/**
+ * Pattern-based resume parser - extracts structured data without AI
+ * This approach is faster, cheaper, and more reliable than LLM parsing
+ */
+function parseResumeText(text: string): any {
+  const profile: any = {};
+
+  // Email extraction
+  const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/i);
+  if (emailMatch) {
+    // We don't store email in profile, but we found it
+  }
+
+  // Phone number extraction (various formats)
+  const phonePatterns = [
+    /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
+    /(\+?\d{1,3}[-.\s]?)?\d{10}/,
+  ];
+  for (const pattern of phonePatterns) {
+    const phoneMatch = text.match(pattern);
+    if (phoneMatch) {
+      profile.phoneNumber = phoneMatch[0].trim();
+      break;
+    }
+  }
+
+  // LinkedIn URL
+  const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/i);
+  if (linkedinMatch) {
+    profile.linkedinUrl = linkedinMatch[0].includes('http')
+      ? linkedinMatch[0]
+      : `https://${linkedinMatch[0]}`;
+  }
+
+  // GitHub URL
+  const githubMatch = text.match(/github\.com\/[\w-]+/i);
+  if (githubMatch) {
+    profile.githubUrl = githubMatch[0].includes('http')
+      ? githubMatch[0]
+      : `https://${githubMatch[0]}`;
+  }
+
+  // Portfolio/Website URL
+  const websiteMatch = text.match(/(?:portfolio|website|site)[\s:]+([^\s,]+\.[a-z]{2,})/i);
+  if (websiteMatch) {
+    profile.portfolioUrl = websiteMatch[1].includes('http')
+      ? websiteMatch[1]
+      : `https://${websiteMatch[1]}`;
+  }
+
+  // Location extraction (City, State/Country patterns)
+  const locationPatterns = [
+    /(?:Location|Address|Based in)[\s:]+([A-Z][a-z]+(?:,?\s+[A-Z]{2})?(?:,?\s+[A-Z][a-z]+)?)/i,
+    /([A-Z][a-z]+,\s*[A-Z]{2}(?:,?\s*[A-Z][a-z]+)?)/,
+  ];
+  for (const pattern of locationPatterns) {
+    const locationMatch = text.match(pattern);
+    if (locationMatch) {
+      profile.location = locationMatch[1].trim();
+      // Extract country code if possible
+      const countryMatch = profile.location.match(/,\s*([A-Z]{2})$/);
+      if (countryMatch) {
+        profile.country = countryMatch[1];
+      }
+      break;
+    }
+  }
+
+  // Years of experience
+  const expMatch = text.match(/(\d+)[\s+-]+years?\s+(?:of\s+)?experience/i);
+  if (expMatch) {
+    profile.yearsOfExperience = parseInt(expMatch[1]);
+  }
+
+  // Education - Degree extraction
+  const degreePatterns = [
+    /(Bachelor|Master|PhD|B\.?S\.?|M\.?S\.?|B\.?A\.?|M\.?A\.?)(?:\s+(?:of|in|degree))?(?:\s+([A-Za-z\s]+))?/i,
+  ];
+  for (const pattern of degreePatterns) {
+    const degreeMatch = text.match(pattern);
+    if (degreeMatch) {
+      profile.highestDegree = degreeMatch[0].trim();
+      if (degreeMatch[2]) {
+        profile.fieldOfStudy = degreeMatch[2].trim();
+      }
+      break;
+    }
+  }
+
+  // University
+  const uniMatch = text.match(/(?:University|College|Institute)\s+(?:of\s+)?([A-Za-z\s]+)/i);
+  if (uniMatch) {
+    profile.university = uniMatch[0].trim();
+  }
+
+  // Graduation Year
+  const gradMatch = text.match(/(?:Graduated|Graduation|Class of)[\s:]+(\d{4})/i) ||
+                     text.match(/(\d{4})\s*-\s*(?:Present|Current)/i);
+  if (gradMatch) {
+    profile.graduationYear = parseInt(gradMatch[1]);
+  }
+
+  // Job titles (look for common patterns)
+  const jobTitlePatterns = [
+    /(Senior|Junior|Lead|Principal|Staff)?\s*(Software|Web|Full[- ]?Stack|Frontend|Backend|DevOps|Data|ML|AI)\s+(Engineer|Developer|Architect|Scientist)/i,
+    /(Product|Project|Engineering|Technical)\s+Manager/i,
+  ];
+  for (const pattern of jobTitlePatterns) {
+    const titleMatch = text.match(pattern);
+    if (titleMatch) {
+      profile.currentJobTitle = titleMatch[0].trim();
+      break;
+    }
+  }
+
+  // Technical Skills - look for skills section
+  const skillsSectionMatch = text.match(/(?:Technical\s+)?Skills[\s:]+([^\n]{20,})/i);
+  if (skillsSectionMatch) {
+    profile.technicalSkills = skillsSectionMatch[1]
+      .split(/[,;|]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0)
+      .join(', ');
+  } else {
+    // Try to find common technologies
+    const techKeywords = [
+      'JavaScript', 'TypeScript', 'Python', 'Java', 'C\\+\\+', 'React', 'Node\\.js',
+      'Angular', 'Vue', 'AWS', 'Docker', 'Kubernetes', 'SQL', 'MongoDB', 'Git'
+    ];
+    const foundSkills: string[] = [];
+    techKeywords.forEach(keyword => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(text)) {
+        foundSkills.push(keyword.replace(/\\/g, ''));
+      }
+    });
+    if (foundSkills.length > 0) {
+      profile.technicalSkills = foundSkills.join(', ');
+    }
+  }
+
+  // Certifications
+  const certMatch = text.match(/Certifications?[\s:]+([^\n]+)/i);
+  if (certMatch) {
+    profile.certifications = certMatch[1].trim();
+  }
+
+  // Languages spoken
+  const langMatch = text.match(/Languages?[\s:]+([A-Za-z,\s]+)/i);
+  if (langMatch) {
+    profile.languagesSpoken = langMatch[1].trim();
+  }
+
+  // Extract summary/objective
+  const summaryMatch = text.match(/(?:Summary|Objective|Profile)[\s:]+([^\n]{50,200})/i);
+  if (summaryMatch) {
+    profile.professionalSummary = summaryMatch[1].trim();
+  }
+
+  return profile;
 }

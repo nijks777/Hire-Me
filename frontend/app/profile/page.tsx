@@ -140,10 +140,16 @@ export default function ProfilePage() {
       });
 
       if (!parseResponse.ok) {
-        throw new Error("Failed to parse resume");
+        const errorData = await parseResponse.json();
+        throw new Error(errorData.error || errorData.message || "Failed to parse resume");
       }
 
       const parsedData = await parseResponse.json();
+
+      if (!parsedData.profile || Object.keys(parsedData.profile).length === 0) {
+        alert("⚠️ Warning: No data could be extracted from your resume. Please check if the resume is readable and try again, or fill the profile manually.");
+        return;
+      }
 
       // Merge parsed data with existing form data
       setFormData(prev => ({
@@ -151,10 +157,12 @@ export default function ProfilePage() {
         ...parsedData.profile,
       }));
 
-      alert("Profile auto-filled from resume successfully! Please review and save.");
+      const fieldsCount = Object.keys(parsedData.profile).length;
+      alert(`✅ Profile auto-filled successfully!\n\n${fieldsCount} fields extracted from your resume.\n\nPlease review the information and save.`);
     } catch (error) {
       console.error("Auto-fill error:", error);
-      alert("Failed to auto-fill from resume. Please try again or fill manually.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`❌ Auto-fill failed!\n\nError: ${errorMessage}\n\nPlease check:\n1. Resume is uploaded and readable\n2. Resume is not password-protected\n3. Browser console for detailed errors\n\nOr fill the profile manually.`);
     } finally {
       setAutoFilling(false);
     }
@@ -401,8 +409,8 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            {/* Auto-fill Button */}
-            <button
+            {/* Auto-fill Button - Commented out as per user request */}
+            {/* <button
               onClick={handleAutoFillFromResume}
               disabled={autoFilling}
               className="group px-6 py-3 bg-linear-to-r from-fuchsia-500 to-cyan-500 text-black font-mono font-black uppercase tracking-wider shadow-lg shadow-fuchsia-500/50 hover:shadow-fuchsia-500/80 transition-all duration-300 transform hover:scale-105 border-2 border-fuchsia-400 hover:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -413,7 +421,7 @@ export default function ProfilePage() {
                 </svg>
                 {autoFilling ? "AUTO-FILLING..." : "AUTO-FILL FROM RESUME"}
               </span>
-            </button>
+            </button> */}
           </div>
         </div>
 

@@ -17,7 +17,7 @@ def content_generator_agent(state: AgentState) -> AgentState:
     print("📝 Agent 5: Generating cover letter and cold email...")
 
     llm = get_traced_llm(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         temperature=0.7,
         tags=["content-generation", "cover-letter", "cold-email"],
         metadata={"agent": "content_generator", "step": 5}

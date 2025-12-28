@@ -25,6 +25,7 @@ export default function GeneratePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   // Form inputs
   const [jobDescription, setJobDescription] = useState("");
@@ -95,14 +96,50 @@ export default function GeneratePage() {
     );
   };
 
+  const handleTestPhase1 = async () => {
+    if (!jobDescription.trim() || !companyName.trim()) {
+      alert("Please enter Job Description and Company Name to test Phase 1.");
+      return;
+    }
+
+    setTesting(true);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/test-phase-1", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          job_description: jobDescription,
+          company_name: companyName,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✅ Phase 1 Test Complete!\n\n⚡ Execution Time: ${data.execution_time}\n🔀 Parallel Execution: ${data.parallel_execution ? 'YES' : 'NO'}\n📊 Sources Found: ${data.company_research?.sources?.length || 0}\n\n✅ Check console for full results!`);
+        console.log("🚀 Phase 1 Test Results:", data);
+      } else {
+        const error = await response.json();
+        alert(`❌ Test Error: ${error.detail || "Failed to test Phase 1"}`);
+      }
+    } catch (error) {
+      console.error("Phase 1 Test Error:", error);
+      alert("❌ Failed to connect to backend. Make sure backend is running on port 8000.");
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!jobDescription || !companyName) {
       alert("Please fill in job description and company name");
       return;
     }
 
-    if (user && user.credits <= 0) {
-      alert("You don't have enough credits. Please contact support.");
+    if (user && user.credits < 2) {
+      alert("You need at least 2 credits (1 for cover letter + 1 for cold email). You have " + user.credits + " credits.");
       return;
     }
 
@@ -116,49 +153,54 @@ export default function GeneratePage() {
 
     // Reset all steps to pending
     setAgentSteps([
-      { name: "Analyzing Job Requirements", status: "pending" },
-      { name: "Researching Company", status: "pending" },
-      { name: "Analyzing Your Resume", status: "pending" },
-      { name: "Analyzing Writing Style", status: "pending" },
-      { name: "Generating Documents", status: "pending" },
+      { name: "Credit Check", status: "pending" },
+      { name: "Analyzing Job & Company", status: "pending" },
+      { name: "Fetching GitHub & Profile", status: "pending" },
+      { name: "Generating Cover Letter", status: "pending" },
+      { name: "Generating Cold Email", status: "pending" },
     ]);
 
     try {
-      const token = localStorage.getItem("access_token");
+      let coverLetter = "";
+      let coldEmail = "";
 
-      // Use SSE for real-time progress updates
-      const response = await fetch("http://localhost:8000/api/generate-stream", {
+      // Step 1: Generate Cover Letter
+      updateStepStatus(0, "in_progress", "Checking credits...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateStepStatus(0, "completed", `${user.credits} credits available`);
+
+      updateStepStatus(1, "in_progress", "Processing cover letter...");
+
+      const coverLetterResponse = await fetch("http://localhost:8000/api/cover-letter/generate-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          user_id: user.id,
           job_description: jobDescription,
           company_name: companyName,
-          hr_name: hrName,
-          custom_prompt: customPrompt,
-          user_id: user.id,
+          document_type: "cover_letter",
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Generation failed");
+      if (!coverLetterResponse.ok) {
+        throw new Error("Cover letter generation failed");
       }
 
-      // Read SSE stream
-      const reader = response.body?.getReader();
+      // Read cover letter SSE stream
+      const clReader = coverLetterResponse.body?.getReader();
       const decoder = new TextDecoder();
 
-      if (reader) {
+      if (clReader) {
         let buffer = "";
         while (true) {
-          const { done, value } = await reader.read();
+          const { done, value } = await clReader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
@@ -167,31 +209,98 @@ export default function GeneratePage() {
                 if (!jsonStr) continue;
 
                 const data = JSON.parse(jsonStr);
-                console.log("SSE Event:", data);
+                console.log("Cover Letter SSE:", data);
 
-                if (data.type === "progress") {
-                  updateStepStatus(data.step - 1, "in_progress", data.message);
-                } else if (data.type === "step_complete") {
-                  updateStepStatus(data.step - 1, "completed", data.message);
+                if (data.type === "phase_complete") {
+                  if (data.phase === 1 || data.phase === 2) {
+                    updateStepStatus(1, "in_progress", data.message);
+                  } else if (data.phase === 3 || data.phase === 4) {
+                    updateStepStatus(2, "in_progress", data.message);
+                  }
                 } else if (data.type === "complete") {
-                  setGeneratedContent(data.generated_content);
-                  await fetchUserData();
+                  coverLetter = data.generated_content || "";
+                  updateStepStatus(1, "completed", "Job & company analysis done");
+                  updateStepStatus(2, "completed", "GitHub & profile fetched");
+                  updateStepStatus(3, "completed", "Cover letter generated");
                 } else if (data.type === "error") {
-                  const stepIndex = data.step ? data.step - 1 : 0;
-                  updateStepStatus(stepIndex, "error", data.message);
-                  alert("Error: " + data.message);
-                  break;
+                  throw new Error(data.message);
                 }
               } catch (e) {
-                console.error("Error parsing SSE data:", e, "Line:", line);
+                console.error("Error parsing cover letter SSE:", e);
               }
             }
           }
         }
       }
+
+      // Step 2: Generate Cold Email
+      updateStepStatus(4, "in_progress", "Generating cold email...");
+
+      const coldEmailResponse = await fetch("http://localhost:8000/api/cold-email/generate-stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          job_description: jobDescription,
+          company_name: companyName,
+          document_type: "cold_email",
+        }),
+      });
+
+      if (!coldEmailResponse.ok) {
+        throw new Error("Cold email generation failed");
+      }
+
+      // Read cold email SSE stream
+      const ceReader = coldEmailResponse.body?.getReader();
+
+      if (ceReader) {
+        let buffer = "";
+        while (true) {
+          const { done, value } = await ceReader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const jsonStr = line.substring(6).trim();
+                if (!jsonStr) continue;
+
+                const data = JSON.parse(jsonStr);
+                console.log("Cold Email SSE:", data);
+
+                if (data.type === "complete") {
+                  coldEmail = data.generated_content || "";
+                  updateStepStatus(4, "completed", "Cold email generated");
+                } else if (data.type === "error") {
+                  throw new Error(data.message);
+                }
+              } catch (e) {
+                console.error("Error parsing cold email SSE:", e);
+              }
+            }
+          }
+        }
+      }
+
+      // Set final content
+      setGeneratedContent({
+        cover_letter: coverLetter,
+        cold_email: coldEmail,
+      });
+
+      // Refresh user data to get updated credits
+      await fetchUserData();
+
     } catch (error) {
       console.error("Generation error:", error);
-      alert("Failed to generate documents. Please try again.");
+      alert("Failed to generate documents: " + (error instanceof Error ? error.message : "Unknown error"));
       // Mark current step as error
       const currentStepIndex = agentSteps.findIndex((s) => s.status === "in_progress");
       if (currentStepIndex >= 0) {
@@ -343,13 +452,20 @@ export default function GeneratePage() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 drop-shadow-[0_0_30px_rgba(34,211,238,0.5)]">
-            {'<'} GENERATE DOCUMENTS {'>'}
-          </h1>
-          <p className="text-emerald-300 font-mono mt-2 text-sm">
-            // AI-powered cover letters and cold emails tailored to your job
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 drop-shadow-[0_0_30px_rgba(34,211,238,0.5)]">
+              {'<'} GENERATE DOCUMENTS {'>'}
+            </h1>
+            <p className="text-emerald-300 font-mono mt-2 text-sm">
+              // AI-powered cover letters and cold emails tailored to your job
+            </p>
+          </div>
+          {user && (
+            <div className="bg-black/60 border-2 border-cyan-500/30 px-6 py-3">
+              <p className="text-cyan-400 font-mono font-bold text-sm">CREDITS: <span className="text-fuchsia-400 text-xl">{user.credits}</span></p>
+            </div>
+          )}
         </div>
 
         {!generatedContent ? (
@@ -425,10 +541,45 @@ export default function GeneratePage() {
                   />
                 </div>
 
+                {/* Test Phase 1 Button */}
+                <button
+                  onClick={handleTestPhase1}
+                  disabled={testing || loading || !jobDescription.trim() || !companyName.trim()}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-black font-mono font-bold uppercase tracking-wider shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-300 border-2 border-emerald-400 hover:border-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {testing ? (
+                    <span className="flex items-center justify-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      TESTING PHASE 1...
+                    </span>
+                  ) : (
+                    `🧪 TEST PHASE 1 (PARALLEL + TAVILY)`
+                  )}
+                </button>
+
                 {/* Generate Button */}
                 <button
                   onClick={handleGenerate}
-                  disabled={loading || !user || user.credits <= 0}
+                  disabled={loading || testing || !user || user.credits < 2}
                   className="w-full py-3 px-4 bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-black font-mono font-black uppercase tracking-wider shadow-lg shadow-fuchsia-500/50 hover:shadow-fuchsia-500/80 transition-all duration-300 transform hover:scale-105 border-2 border-fuchsia-400 hover:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
@@ -456,17 +607,17 @@ export default function GeneratePage() {
                       GENERATING...
                     </span>
                   ) : (
-                    `⚡ GENERATE DOCUMENTS (1 CREDIT)`
+                    `⚡ GENERATE DOCUMENTS (2 CREDITS)`
                   )}
                 </button>
 
-                {user && user.credits <= 0 && (
+                {user && user.credits < 2 && (
                   <p className="text-red-400 text-sm text-center font-mono font-bold">
-                    {'>'} NO CREDITS REMAINING
+                    {'>'} NEED 2 CREDITS (YOU HAVE {user.credits})
                   </p>
                 )}
 
-                {user && user.credits > 0 && (
+                {user && user.credits >= 2 && (
                   <p className="text-emerald-300/60 text-sm text-center font-mono">
                     // {user.credits} credits remaining
                   </p>
@@ -581,12 +732,16 @@ export default function GeneratePage() {
                 <button
                   onClick={() => {
                     setGeneratedContent(null);
+                    setJobDescription("");
+                    setCompanyName("");
+                    setHrName("");
+                    setCustomPrompt("");
                     setAgentSteps([
-                      { name: "Analyzing Job Requirements", status: "pending" },
-                      { name: "Researching Company", status: "pending" },
-                      { name: "Analyzing Your Resume", status: "pending" },
-                      { name: "Analyzing Writing Style", status: "pending" },
-                      { name: "Generating Documents", status: "pending" },
+                      { name: "Credit Check", status: "pending" },
+                      { name: "Analyzing Job & Company", status: "pending" },
+                      { name: "Fetching GitHub & Profile", status: "pending" },
+                      { name: "Generating Cover Letter", status: "pending" },
+                      { name: "Generating Cold Email", status: "pending" },
                     ]);
                   }}
                   className="px-4 py-2 bg-gradient-to-r from-fuchsia-500 to-fuchsia-600 text-black font-mono font-bold uppercase border-2 border-fuchsia-400 hover:from-fuchsia-600 hover:to-fuchsia-700 transition-all shadow-lg shadow-fuchsia-500/30 transform hover:scale-105"

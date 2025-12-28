@@ -58,3 +58,16 @@ next-env.d.ts
 
 # Prisma
 /lib/generated/prisma
+
+# Environment files
+*.env
+*.env.local
+.env
+.env.local
+backend/.env
+frontend/.env.local
+
+# Test output files
+backend/test_*_output.txt
+backend/test_*_output.json
+backend/test_*_state.json

@@ -123,10 +123,5 @@ def get_langsmith_project() -> str:
     return os.getenv("LANGSMITH_PROJECT", "Hire-Me")
 
 
-# Print configuration on import
-if __name__ != "__main__":
-    enabled = is_langsmith_enabled()
-    project = get_langsmith_project()
-    print(f"📊 LangSmith Tracing: {'✅ ENABLED' if enabled else '❌ DISABLED'}")
-    if enabled:
-        print(f"📁 LangSmith Project: {project}")
+# Configuration check is now only done in langsmith_startup.py
+# This prevents duplicate messages on import

@@ -15,7 +15,8 @@ from agents.style_analyzer import style_analyzer_agent
 from agents.content_generator import content_generator_agent
 from utils.database import (
     get_user_data, save_generation,
-    get_user_generations, get_generation_by_id, delete_generation
+    get_user_generations, get_generation_by_id, delete_generation,
+    deduct_user_credit
 )
 from utils.pdf_extractor import extract_text_from_file
 from utils.langsmith_startup import configure_langsmith
@@ -129,6 +130,11 @@ async def generate_stream(request: GenerateRequest):
                 yield f"data: {json.dumps({'type': 'error', 'message': 'User not found'})}\n\n"
                 return
 
+            # Check if user has enough credits
+            if user_data.get("credits", 0) <= 0:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Insufficient credits. Please contact support to add more credits.'})}\n\n"
+                return
+
             # Extract resume and demo files
             user_resume = extract_text_from_file(
                 user_data.get("resumeData"),
@@ -170,25 +176,39 @@ async def generate_stream(request: GenerateRequest):
                 "errors": []
             }
 
-            # Step 1: Input Analyzer
-            yield f"data: {json.dumps({'type': 'progress', 'step': 1, 'message': 'Analyzing job requirements...'})}\n\n"
-            state = input_analyzer_agent(initial_state)
+            # PHASE 1: Run Input Analyzer + Research in PARALLEL ⚡
+            yield f"data: {json.dumps({'type': 'progress', 'step': 1, 'message': 'Running parallel analysis (Input + Research)...'})}\n\n"
+
+            # Run both agents in parallel using asyncio
+            def run_input_analyzer():
+                return input_analyzer_agent(initial_state.copy())
+
+            def run_research():
+                # Research needs company_name which is already in initial_state
+                return research_agent(initial_state.copy())
+
+            # Execute in parallel
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            input_result, research_result = await asyncio.gather(
+                asyncio.to_thread(run_input_analyzer),
+                asyncio.to_thread(run_research)
+            )
+
+            # Merge results
+            state = initial_state.copy()
+            state["job_requirements"] = input_result.get("job_requirements")
+            state["company_research"] = research_result.get("company_research")
+            state["progress_messages"].extend(input_result.get("progress_messages", []))
+            state["progress_messages"].extend(research_result.get("progress_messages", []))
+            state["errors"].extend(input_result.get("errors", []))
+            state["errors"].extend(research_result.get("errors", []))
 
             if state.get("errors"):
                 yield f"data: {json.dumps({'type': 'error', 'step': 1, 'message': state['errors'][0]})}\n\n"
                 return
 
-            yield f"data: {json.dumps({'type': 'step_complete', 'step': 1, 'message': 'Job requirements extracted'})}\n\n"
-
-            # Step 2: Research
-            yield f"data: {json.dumps({'type': 'progress', 'step': 2, 'message': 'Researching company...'})}\n\n"
-            state = research_agent(state)
-
-            if state.get("errors"):
-                yield f"data: {json.dumps({'type': 'error', 'step': 2, 'message': state['errors'][0]})}\n\n"
-                return
-
-            yield f"data: {json.dumps({'type': 'step_complete', 'step': 2, 'message': 'Company insights gathered'})}\n\n"
+            yield f"data: {json.dumps({'type': 'step_complete', 'step': 1, 'message': 'Parallel analysis complete! (Input + Research)'})}\n\n"
 
             # Step 3: Resume Analyzer
             yield f"data: {json.dumps({'type': 'progress', 'step': 3, 'message': 'Analyzing your resume...'})}\n\n"
@@ -235,6 +255,11 @@ async def generate_stream(request: GenerateRequest):
                 user_qualifications=final_state.get("user_qualifications"),
                 writing_style=final_state.get("writing_style")
             )
+
+            # Deduct 1 credit from user after successful generation
+            credit_deducted = deduct_user_credit(request.user_id, amount=1)
+            if not credit_deducted:
+                print(f"⚠️ Warning: Failed to deduct credit for user {request.user_id}")
 
             # Send completion event with generated content
             yield f"data: {json.dumps({'type': 'complete', 'generation_id': generation_id, 'generated_content': generated_content})}\n\n"
@@ -666,9 +691,98 @@ SKILLS:
         current_agent=final_state.get("current_agent")
     )
 
+@app.post("/api/test-phase-1")
+async def test_phase_1(request: dict):
+    """
+    Test Phase 1: Parallel execution of Input Analyzer + Research Agent
+
+    This endpoint tests the new parallel architecture with Tavily web search
+    """
+    try:
+        job_description = request.get("job_description", "")
+        company_name = request.get("company_name", "")
+
+        if not job_description or not company_name:
+            raise HTTPException(status_code=400, detail="job_description and company_name required")
+
+        # Initialize state
+        initial_state: AgentState = {
+            "job_description": job_description,
+            "company_name": company_name,
+            "hr_name": None,
+            "custom_prompt": None,
+            "user_resume": None,
+            "user_profile": None,
+            "demo_cover_letter": None,
+            "demo_cold_email": None,
+            "job_requirements": None,
+            "company_research": None,
+            "user_qualifications": None,
+            "writing_style": None,
+            "generated_content": None,
+            "current_agent": None,
+            "progress_messages": [],
+            "errors": []
+        }
+
+        import time
+        start_time = time.time()
+
+        # Run both agents in parallel
+        def run_input_analyzer():
+            return input_analyzer_agent(initial_state.copy())
+
+        def run_research():
+            return research_agent(initial_state.copy())
+
+        # Execute in parallel
+        input_result, research_result = await asyncio.gather(
+            asyncio.to_thread(run_input_analyzer),
+            asyncio.to_thread(run_research)
+        )
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Merge results
+        final_state = initial_state.copy()
+        final_state["job_requirements"] = input_result.get("job_requirements")
+        final_state["company_research"] = research_result.get("company_research")
+        final_state["progress_messages"] = (
+            input_result.get("progress_messages", []) +
+            research_result.get("progress_messages", [])
+        )
+        final_state["errors"] = (
+            input_result.get("errors", []) +
+            research_result.get("errors", [])
+        )
+
+        return {
+            "success": len(final_state["errors"]) == 0,
+            "execution_time": f"{execution_time:.2f}s",
+            "parallel_execution": True,
+            "job_requirements": final_state.get("job_requirements"),
+            "company_research": final_state.get("company_research"),
+            "progress_messages": final_state["progress_messages"],
+            "errors": final_state["errors"]
+        }
+
+    except Exception as e:
+        print(f"Phase 1 test error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include resume test routes
 from app.routes import resume_test
 app.include_router(resume_test.router)
+
+# Include resume customization routes
+from app.routes import resume_customization
+from app.routes import resume_suggestions
+from app.routes import cover_letter
+
+app.include_router(resume_customization.router)
+app.include_router(cover_letter.router)
+app.include_router(resume_suggestions.router)
 
 if __name__ == "__main__":
     import uvicorn
