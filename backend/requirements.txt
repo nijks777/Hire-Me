@@ -1,52 +1,52 @@
 # FastAPI & Server
-fastapi==0.121.2
-uvicorn[standard]==0.7.1
-python-multipart==0.0.20
-python-dotenv==1.2.1
-pydantic==2.12.4
-pydantic-settings==2.12.0
-gunicorn==23.0.0
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic
+pydantic-settings
+gunicorn
 
 # LangChain & LangGraph
-langchain==1.1.0
-langchain-openai==1.1.0
-langgraph==1.0.4
-langchain-core==1.1.0
-langsmith==0.4.49
-langgraph-checkpoint==3.0.1
-langchain-community==0.4.1
+langchain
+langchain-openai
+langgraph
+langchain-core
+langsmith
+langgraph-checkpoint
+langchain-community
 
 # OpenAI
-openai==2.8.1
+openai
 
 # Database
-psycopg2-binary==2.9.11
-sqlalchemy==2.0.35
-alembic==1.13.3
+psycopg2-binary
+sqlalchemy
+alembic
 
 # Auth
-PyJWT==2.9.0
-passlib==1.7.4
-python-jose==3.5.0
-bcrypt==4.2.0
+pyjwt
+passlib[bcrypt]
+python-jose[cryptography]
+bcrypt
 
 # Utils
-httpx==0.27.2
-python-dateutil==2.9.0
-typing-extensions==4.12.2
+httpx
+python-dateutil
+typing-extensions
 
 # PDF Processing
-PyPDF2==3.0.1
+PyPDF2
 
 # HTTP Client
-httpcore==1.0.6
+httpcore
 
 # Web Search (Tavily)
-tavily-python==0.5.0
+tavily-python
 
 # GitHub Integration
-PyGithub==2.4.0
+PyGithub
 
 # Resume Processing & ATS
-python-docx==1.2.0
-markdown==3.7
+python-docx
+markdown
